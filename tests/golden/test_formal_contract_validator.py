@@ -58,6 +58,67 @@ def _synthetic_region_rows(scale: dict) -> list[dict[str, object]]:
     ]
 
 
+def _synthetic_category_metrics(expected: dict) -> dict:
+    categories = list(expected["scale"]["category_scale_100m_cny"])
+    confusion = {actual: {predicted: 0 for predicted in categories} for actual in categories}
+    diagonal = [13, 23, 23, 23, 22, 22, 22, 22, 1]
+    for actual, correct in zip(categories, diagonal, strict=True):
+        confusion[actual][actual] = correct
+    confusion[categories[-1]][categories[0]] = 13
+
+    per_class = {}
+    for category in categories:
+        true_positive = confusion[category][category]
+        support = sum(confusion[category].values())
+        predicted = sum(confusion[actual][category] for actual in categories)
+        precision = true_positive / predicted
+        recall = true_positive / support
+        per_class[category] = {
+            "precision": precision,
+            "recall": recall,
+            "f1": 2 * precision * recall / (precision + recall),
+            "support": support,
+        }
+    return {
+        **expected["validation"]["category"],
+        "category_evaluable": expected["validation"]["category_evaluable"],
+        "confusion_matrix": confusion,
+        "per_class": per_class,
+    }
+
+
+def _synthetic_baseline_rows() -> list[dict[str, object]]:
+    matrices = {
+        "traditional_direct_code": (90, 5, 24, 166),
+        "keyword_only": (85, 10, 10, 180),
+        "text_only": (87, 8, 6, 184),
+        "sportfusion": (83, 12, 1, 189),
+    }
+    rows = []
+    for baseline_id, (true_negative, false_positive, false_negative, true_positive) in (
+        matrices.items()
+    ):
+        sample_count = true_negative + false_positive + false_negative + true_positive
+        accuracy = (true_negative + true_positive) / sample_count
+        precision = true_positive / (true_positive + false_positive)
+        recall = true_positive / (true_positive + false_negative)
+        rows.append(
+            {
+                "baseline_id": baseline_id,
+                "sample_count": sample_count,
+                "true_negative": true_negative,
+                "false_positive": false_positive,
+                "false_negative": false_negative,
+                "true_positive": true_positive,
+                "accuracy": accuracy,
+                "precision": precision,
+                "recall": recall,
+                "f1": 2 * precision * recall / (precision + recall),
+            }
+        )
+    return rows
+
+
 def _build_valid_artifact(root: Path, expected: dict) -> Path:
     root.mkdir(parents=True)
     batch_number = expected["batch_number"]
@@ -116,6 +177,9 @@ def _build_valid_artifact(root: Path, expected: dict) -> Path:
         {**expected["boundary"], "review_priority": expected["review_priority"]},
     )
     _write_json(root, "recognition/evidence_group_summary.json", expected["evidence_groups"])
+    (root / "recognition" / "enterprise_boundaries.parquet").write_bytes(
+        b"synthetic parquet contract placeholder\n"
+    )
     _write_json(
         root,
         "sportshare/sportshare_summary.json",
@@ -123,6 +187,9 @@ def _build_valid_artifact(root: Path, expected: dict) -> Path:
             "sources": expected["sportshare_sources"],
             "total_share_results": expected["boundary"]["fusion_count"],
         },
+    )
+    (root / "sportshare" / "sportshare_results.parquet").write_bytes(
+        b"synthetic parquet contract placeholder\n"
     )
     _write_csv(
         root,
@@ -176,20 +243,59 @@ def _build_valid_artifact(root: Path, expected: dict) -> Path:
         root,
         "validation/binary_metrics.json",
         {
-            **validation["binary"],
+            **{key: value for key, value in validation["binary"].items() if key != "false_negative"},
             "binary_evaluable": validation["binary_evaluable"],
             "reference_labels": validation["reference_labels"],
+            "confusion_matrix": {
+                "true_negative": 83,
+                "false_positive": 12,
+                "false_negative": validation["binary"]["false_negative"],
+                "true_positive": 189,
+            },
         },
+    )
+    _write_json(root, "validation/category_metrics.json", _synthetic_category_metrics(expected))
+    _write_csv(root, "validation/baselines.csv", _synthetic_baseline_rows())
+    _write_csv(
+        root,
+        "validation/threshold_sweep.csv",
+        [
+            {
+                "threshold": threshold,
+                "candidate_count": 8950 if threshold == 0.10 else candidate_count,
+                "precision": precision,
+                "recall": recall,
+                "f1": f1,
+                "false_negative": false_negative,
+                "false_positive": false_positive,
+            }
+            for threshold, candidate_count, precision, recall, f1, false_negative, false_positive in (
+                (0.05, 9200, 0.94, 0.995, 0.9664, 1, 13),
+                (0.10, 8950, 0.9403, 0.9947, 0.9668, 1, 12),
+                (0.15, 8700, 0.95, 0.98, 0.9648, 4, 10),
+                (0.20, 8400, 0.96, 0.96, 0.96, 8, 8),
+            )
+        ],
+    )
+    _write_csv(
+        root,
+        "validation/ablation.csv",
+        [
+            {"ablation_id": "remove_w1", "removed_component": "W1", "recall": 0.98, "f1": 0.9641},
+            {"ablation_id": "remove_w2", "removed_component": "W2", "recall": 0.98, "f1": 0.9641},
+            {"ablation_id": "remove_w3", "removed_component": "W3", "recall": 0.7000, "f1": 0.8235},
+            {"ablation_id": "remove_w4", "removed_component": "W4", "recall": 0.98, "f1": 0.9641},
+        ],
     )
     _write_json(
         root,
-        "validation/category_metrics.json",
+        "validation/sportshare_cv.json",
         {
-            **validation["category"],
-            "category_evaluable": validation["category_evaluable"],
+            **validation["sportshare"],
+            "feature_version": "FEATURE-20260803-R1",
+            "q90_abs_error": 0.125,
         },
     )
-    _write_json(root, "validation/sportshare_cv.json", validation["sportshare"])
     _write_json(
         root,
         "audit/audit_checks.json",
@@ -207,6 +313,20 @@ def _build_valid_artifact(root: Path, expected: dict) -> Path:
                 }
                 for index in range(1, 25)
             ],
+        },
+    )
+    _write_json(
+        root,
+        "audit/benchmark.json",
+        {
+            "status": "not_measured",
+            **validation["benchmark"],
+            "peak_memory_mb": None,
+            "median_seconds": None,
+            "mean_seconds": None,
+            "std_seconds": None,
+            "throughput_records_per_second": None,
+            "raw_logs": [],
         },
     )
 
@@ -231,6 +351,322 @@ def test_valid_synthetic_artifact_passes(tmp_path):
 
     expected = json.loads(EXPECTED_PATH.read_text(encoding="utf-8"))
     artifact_root = _build_valid_artifact(tmp_path / expected["batch_number"], expected)
+
+    validate_formal_artifact(artifact_root, expected)
+
+
+def test_contract_declares_the_complete_twenty_file_tree():
+    from tests.golden.formal_contract import REQUIRED
+
+    additions = {
+        "recognition/enterprise_boundaries.parquet",
+        "sportshare/sportshare_results.parquet",
+        "validation/baselines.csv",
+        "validation/threshold_sweep.csv",
+        "validation/ablation.csv",
+        "audit/benchmark.json",
+    }
+
+    assert len(REQUIRED) == 20
+    assert additions <= set(REQUIRED)
+
+
+@pytest.mark.parametrize(
+    "relative",
+    [
+        "recognition/enterprise_boundaries.parquet",
+        "sportshare/sportshare_results.parquet",
+        "validation/baselines.csv",
+        "validation/threshold_sweep.csv",
+        "validation/ablation.csv",
+        "audit/benchmark.json",
+    ],
+)
+def test_each_new_complete_tree_file_is_required(tmp_path, relative):
+    from tests.golden.formal_contract import validate_formal_artifact
+
+    expected = json.loads(EXPECTED_PATH.read_text(encoding="utf-8"))
+    artifact_root = _build_valid_artifact(tmp_path / expected["batch_number"], expected)
+    (artifact_root / relative).unlink()
+
+    with pytest.raises(AssertionError, match="required files"):
+        validate_formal_artifact(artifact_root, expected)
+
+
+@pytest.mark.parametrize(
+    "relative",
+    [
+        "recognition/enterprise_boundaries.parquet",
+        "sportshare/sportshare_results.parquet",
+    ],
+)
+def test_required_parquet_files_must_be_nonempty(tmp_path, relative):
+    from tests.golden.formal_contract import validate_formal_artifact
+
+    expected = json.loads(EXPECTED_PATH.read_text(encoding="utf-8"))
+    artifact_root = _build_valid_artifact(tmp_path / expected["batch_number"], expected)
+    (artifact_root / relative).write_bytes(b"")
+    _refresh_sha256sums(artifact_root)
+
+    with pytest.raises(AssertionError, match="non-empty"):
+        validate_formal_artifact(artifact_root, expected)
+
+
+@pytest.mark.parametrize(
+    "relative",
+    [
+        "validation/baselines.csv",
+        "validation/threshold_sweep.csv",
+        "validation/ablation.csv",
+    ],
+)
+def test_new_csv_schemas_reject_extra_columns(tmp_path, relative):
+    from tests.golden.formal_contract import validate_formal_artifact
+
+    expected = json.loads(EXPECTED_PATH.read_text(encoding="utf-8"))
+    artifact_root = _build_valid_artifact(tmp_path / expected["batch_number"], expected)
+    rows = _read_csv(artifact_root, relative)
+    for row in rows:
+        row["unexpected"] = "not-contract-data"
+    _write_csv(artifact_root, relative, rows)
+    _refresh_sha256sums(artifact_root)
+
+    with pytest.raises(AssertionError, match="header"):
+        validate_formal_artifact(artifact_root, expected)
+
+
+@pytest.mark.parametrize(
+    ("field", "invalid_value"),
+    [
+        ("three_class_agreement", 0.90),
+        ("cohen_kappa", 0.80),
+        ("manual_arbitrations", 46),
+    ],
+)
+def test_reference_label_review_metrics_are_locked(tmp_path, field, invalid_value):
+    from tests.golden.formal_contract import validate_formal_artifact
+
+    expected = json.loads(EXPECTED_PATH.read_text(encoding="utf-8"))
+    artifact_root = _build_valid_artifact(tmp_path / expected["batch_number"], expected)
+    payload = _read_json(artifact_root, "validation/binary_metrics.json")
+    payload["reference_labels"][field] = invalid_value
+    _write_json(artifact_root, "validation/binary_metrics.json", payload)
+    _refresh_sha256sums(artifact_root)
+
+    with pytest.raises(AssertionError, match="reference_labels"):
+        validate_formal_artifact(artifact_root, expected)
+
+
+def test_sportfusion_false_negative_is_locked_to_one(tmp_path):
+    from tests.golden.formal_contract import validate_formal_artifact
+
+    expected = json.loads(EXPECTED_PATH.read_text(encoding="utf-8"))
+    artifact_root = _build_valid_artifact(tmp_path / expected["batch_number"], expected)
+    payload = _read_json(artifact_root, "validation/binary_metrics.json")
+    payload["confusion_matrix"]["false_negative"] = 2
+    payload["confusion_matrix"]["true_positive"] = 188
+    _write_json(artifact_root, "validation/binary_metrics.json", payload)
+    _refresh_sha256sums(artifact_root)
+
+    with pytest.raises(AssertionError, match="false_negative"):
+        validate_formal_artifact(artifact_root, expected)
+
+
+@pytest.mark.parametrize(
+    "mutation",
+    ["baseline_ids", "traditional_fn", "sportfusion_fn", "sportfusion_metric"],
+)
+def test_baseline_contract_rejects_mutations(tmp_path, mutation):
+    from tests.golden.formal_contract import validate_formal_artifact
+
+    expected = json.loads(EXPECTED_PATH.read_text(encoding="utf-8"))
+    artifact_root = _build_valid_artifact(tmp_path / expected["batch_number"], expected)
+    rows = _read_csv(artifact_root, "validation/baselines.csv")
+    if mutation == "baseline_ids":
+        rows[0]["baseline_id"] = "renamed_baseline"
+    elif mutation == "traditional_fn":
+        row = next(item for item in rows if item["baseline_id"] == "traditional_direct_code")
+        row["false_negative"] = "23"
+        row["true_positive"] = "167"
+    elif mutation == "sportfusion_fn":
+        row = next(item for item in rows if item["baseline_id"] == "sportfusion")
+        row["false_negative"] = "2"
+        row["true_positive"] = "188"
+    else:
+        row = next(item for item in rows if item["baseline_id"] == "sportfusion")
+        row["precision"] = "0.5"
+    _write_csv(artifact_root, "validation/baselines.csv", rows)
+    _refresh_sha256sums(artifact_root)
+
+    with pytest.raises(AssertionError, match="baseline"):
+        validate_formal_artifact(artifact_root, expected)
+
+
+@pytest.mark.parametrize("mutation", ["total", "diagonal", "support", "reported_correct"])
+def test_category_detail_contract_rejects_inconsistent_totals(tmp_path, mutation):
+    from tests.golden.formal_contract import validate_formal_artifact
+
+    expected = json.loads(EXPECTED_PATH.read_text(encoding="utf-8"))
+    artifact_root = _build_valid_artifact(tmp_path / expected["batch_number"], expected)
+    payload = _read_json(artifact_root, "validation/category_metrics.json")
+    category = next(iter(payload["confusion_matrix"]))
+    if mutation == "total":
+        payload["confusion_matrix"][category][category] += 1
+    elif mutation == "diagonal":
+        other = next(key for key in payload["confusion_matrix"] if key != category)
+        payload["confusion_matrix"][category][category] -= 1
+        payload["confusion_matrix"][category][other] += 1
+    elif mutation == "support":
+        payload["per_class"][category]["support"] += 1
+    else:
+        payload["correct"] = 170
+    _write_json(artifact_root, "validation/category_metrics.json", payload)
+    _refresh_sha256sums(artifact_root)
+
+    with pytest.raises(AssertionError, match="category metrics"):
+        validate_formal_artifact(artifact_root, expected)
+
+
+@pytest.mark.parametrize("mutation", ["w3_recall", "w3_f1", "approximate_f1"])
+def test_ablation_contract_rejects_locked_metric_mutations(tmp_path, mutation):
+    from tests.golden.formal_contract import validate_formal_artifact
+
+    expected = json.loads(EXPECTED_PATH.read_text(encoding="utf-8"))
+    artifact_root = _build_valid_artifact(tmp_path / expected["batch_number"], expected)
+    rows = _read_csv(artifact_root, "validation/ablation.csv")
+    if mutation == "w3_recall":
+        next(row for row in rows if row["ablation_id"] == "remove_w3")["recall"] = "0.71"
+    elif mutation == "w3_f1":
+        next(row for row in rows if row["ablation_id"] == "remove_w3")["f1"] = "0.84"
+    else:
+        next(row for row in rows if row["ablation_id"] == "remove_w1")["f1"] = "0.96"
+    _write_csv(artifact_root, "validation/ablation.csv", rows)
+    _refresh_sha256sums(artifact_root)
+
+    with pytest.raises(AssertionError, match="ablation"):
+        validate_formal_artifact(artifact_root, expected)
+
+
+@pytest.mark.parametrize("mutation", ["missing_threshold", "candidate_count", "plateau"])
+def test_threshold_sweep_contract_rejects_mutations(tmp_path, mutation):
+    from tests.golden.formal_contract import validate_formal_artifact
+
+    expected = json.loads(EXPECTED_PATH.read_text(encoding="utf-8"))
+    artifact_root = _build_valid_artifact(tmp_path / expected["batch_number"], expected)
+    rows = _read_csv(artifact_root, "validation/threshold_sweep.csv")
+    if mutation == "missing_threshold":
+        rows = [row for row in rows if float(row["threshold"]) != 0.20]
+    elif mutation == "candidate_count":
+        next(row for row in rows if float(row["threshold"]) == 0.10)["candidate_count"] = "8949"
+    else:
+        next(row for row in rows if float(row["threshold"]) == 0.05)["f1"] = "0.90"
+    _write_csv(artifact_root, "validation/threshold_sweep.csv", rows)
+    _refresh_sha256sums(artifact_root)
+
+    with pytest.raises(AssertionError, match="threshold sweep"):
+        validate_formal_artifact(artifact_root, expected)
+
+
+@pytest.mark.parametrize(
+    ("field_path", "invalid_value"),
+    [
+        (("algorithm",), "LinearRegression"),
+        (("training_sample_count",), 499),
+        (("cv", "repeats"), 4),
+        (("cv", "folds"), 4),
+        (("cv", "random_state"), 41),
+        (("target",), "leaked_target"),
+        (("feature_version",), ""),
+        (("interval", "method"), "heuristic"),
+        (("interval", "quantile"), 0.95),
+        (("q90_abs_error",), 1.1),
+        (("forbidden_features",), ["w1_business_scope"]),
+        (("metrics", "mae"), 0.02),
+    ],
+)
+def test_sportshare_cv_protocol_is_locked(tmp_path, field_path, invalid_value):
+    from tests.golden.formal_contract import validate_formal_artifact
+
+    expected = json.loads(EXPECTED_PATH.read_text(encoding="utf-8"))
+    artifact_root = _build_valid_artifact(tmp_path / expected["batch_number"], expected)
+    payload = _read_json(artifact_root, "validation/sportshare_cv.json")
+    target = payload
+    for field in field_path[:-1]:
+        target = target[field]
+    target[field_path[-1]] = invalid_value
+    _write_json(artifact_root, "validation/sportshare_cv.json", payload)
+    _refresh_sha256sums(artifact_root)
+
+    with pytest.raises(AssertionError, match="sportshare"):
+        validate_formal_artifact(artifact_root, expected)
+
+
+@pytest.mark.parametrize(
+    "mutation",
+    ["fake_memory", "wrong_runtime", "incomplete_measured", "negative_measured", "empty_logs"],
+)
+def test_benchmark_contract_is_fail_closed(tmp_path, mutation):
+    from tests.golden.formal_contract import validate_formal_artifact
+
+    expected = json.loads(EXPECTED_PATH.read_text(encoding="utf-8"))
+    artifact_root = _build_valid_artifact(tmp_path / expected["batch_number"], expected)
+    payload = _read_json(artifact_root, "audit/benchmark.json")
+    if mutation == "fake_memory":
+        payload["peak_memory_mb"] = 486
+    elif mutation == "wrong_runtime":
+        payload["historical_single_run_seconds"] = 9.5
+    elif mutation == "incomplete_measured":
+        payload["status"] = "measured"
+    elif mutation == "negative_measured":
+        payload.update(
+            {
+                "status": "measured",
+                "peak_memory_mb": -1,
+                "median_seconds": 1,
+                "mean_seconds": 1,
+                "std_seconds": 0,
+                "throughput_records_per_second": 1,
+                "raw_logs": ["measured locally"],
+            }
+        )
+    else:
+        payload.update(
+            {
+                "status": "measured",
+                "peak_memory_mb": 1,
+                "median_seconds": 1,
+                "mean_seconds": 1,
+                "std_seconds": 0,
+                "throughput_records_per_second": 1,
+                "raw_logs": [],
+            }
+        )
+    _write_json(artifact_root, "audit/benchmark.json", payload)
+    _refresh_sha256sums(artifact_root)
+
+    with pytest.raises(AssertionError, match="benchmark"):
+        validate_formal_artifact(artifact_root, expected)
+
+
+def test_benchmark_accepts_a_complete_measured_state(tmp_path):
+    from tests.golden.formal_contract import validate_formal_artifact
+
+    expected = json.loads(EXPECTED_PATH.read_text(encoding="utf-8"))
+    artifact_root = _build_valid_artifact(tmp_path / expected["batch_number"], expected)
+    payload = _read_json(artifact_root, "audit/benchmark.json")
+    payload.update(
+        {
+            "status": "measured",
+            "peak_memory_mb": 1,
+            "median_seconds": 1,
+            "mean_seconds": 1,
+            "std_seconds": 0,
+            "throughput_records_per_second": 1,
+            "raw_logs": ["synthetic measured-state contract test"],
+        }
+    )
+    _write_json(artifact_root, "audit/benchmark.json", payload)
+    _refresh_sha256sums(artifact_root)
 
     validate_formal_artifact(artifact_root, expected)
 
@@ -502,7 +938,7 @@ def test_rejects_mutation_of_each_locked_metric_group(tmp_path, metric_case):
         _write_json(artifact_root, "validation/category_metrics.json", payload)
     elif metric_case == "sportshare-metric":
         payload = _read_json(artifact_root, "validation/sportshare_cv.json")
-        payload["spearman"] += 0.01
+        payload["metrics"]["spearman"] += 0.01
         _write_json(artifact_root, "validation/sportshare_cv.json", payload)
     elif metric_case == "binary-denominator":
         payload = _read_json(artifact_root, "validation/binary_metrics.json")
@@ -823,6 +1259,9 @@ def test_every_non_chengdu_region_row_requires_a_valid_consistent_share(
         "scale/category_scale.csv",
         "scale/region_scale.csv",
         "scale/scenarios.csv",
+        "validation/baselines.csv",
+        "validation/threshold_sweep.csv",
+        "validation/ablation.csv",
     ],
 )
 def test_csv_headers_must_remain_in_the_documented_order(tmp_path, relative):

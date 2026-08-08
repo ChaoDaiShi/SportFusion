@@ -1,6 +1,7 @@
 """Strict test-side contract for a locked SportFusion formal artifact.
 
-The Phase 0 schema is deliberately small and explicit. ``batch_metadata.json`` carries
+The Phase 0 schema covers the complete 20-file competition artifact tree and is
+deliberately explicit. ``batch_metadata.json`` carries
 the Section 9.1 identity, version, hash, parameter, runtime, and lock fields.
 ``input_manifest.json`` repeats the batch/mode/input digest and declares one or more
 inputs with ``path``, ``sha256``, and the typed exact provenance string ``"formal"``.
@@ -15,7 +16,12 @@ the exact key ``__UNRESOLVED__`` and is excluded from the mapped-row/CR5 calcula
 ``review_priority`` distribution with only ``P1`` through ``P4``. Scenario alpha fields
 are raw canonical tokens ``0.00``, ``0.10``, ``0.20``, and ``0.30``; scenario IDs are the
 direct 3-by-4 set ``{evidence_profile}-alpha-{alpha_token}``. No aliases, duplicate JSON
-keys, duplicate CSV headers, or legacy layouts are inferred.
+keys, duplicate CSV headers, or legacy layouts are inferred. Parquet artifacts are
+required to be non-empty and are bound by ``SHA256SUMS`` without interpreting their
+contents in Phase 0. ``audit/benchmark.json`` distinguishes an explicit
+``not_measured`` state (all new measurements null/empty, especially peak memory) from
+a complete finite non-negative ``measured`` result, so historical runtime cannot be
+silently presented as a newly executed benchmark.
 """
 
 import csv
@@ -32,15 +38,21 @@ REQUIRED = (
     "input_manifest.json",
     "recognition/recognition_summary.json",
     "recognition/evidence_group_summary.json",
+    "recognition/enterprise_boundaries.parquet",
     "sportshare/sportshare_summary.json",
+    "sportshare/sportshare_results.parquet",
     "scale/category_scale.csv",
     "scale/region_scale.csv",
     "scale/boundary_scale.json",
     "scale/scenarios.csv",
     "validation/binary_metrics.json",
     "validation/category_metrics.json",
+    "validation/baselines.csv",
+    "validation/threshold_sweep.csv",
+    "validation/ablation.csv",
     "validation/sportshare_cv.json",
     "audit/audit_checks.json",
+    "audit/benchmark.json",
     "SHA256SUMS",
 )
 
@@ -65,6 +77,33 @@ _CSV_HEADERS = {
         "total_output_100m_cny",
         "boundary_in_100m_cny",
         "boundary_out_100m_cny",
+    ),
+    "validation/baselines.csv": (
+        "baseline_id",
+        "sample_count",
+        "true_negative",
+        "false_positive",
+        "false_negative",
+        "true_positive",
+        "accuracy",
+        "precision",
+        "recall",
+        "f1",
+    ),
+    "validation/threshold_sweep.csv": (
+        "threshold",
+        "candidate_count",
+        "precision",
+        "recall",
+        "f1",
+        "false_negative",
+        "false_positive",
+    ),
+    "validation/ablation.csv": (
+        "ablation_id",
+        "removed_component",
+        "recall",
+        "f1",
     ),
 }
 _SCENARIO_PROFILES = ("conservative", "baseline", "expanded")
@@ -122,6 +161,25 @@ def _number(value: object, area: str) -> float:
         raise AssertionError(f"contract {area}: expected a number") from error
     _require(math.isfinite(number), f"contract {area}: expected a finite number")
     return number
+
+
+def _integer(value: object, area: str) -> int:
+    number = _number(value, area)
+    _require(number.is_integer(), f"contract {area}: expected an integer")
+    return int(number)
+
+
+def _rate(value: object, area: str) -> float:
+    number = _number(value, area)
+    _require(0.0 <= number <= 1.0, f"contract {area}: expected a value within [0, 1]")
+    return number
+
+
+def _exact_keys(payload: dict, keys: set[str], area: str) -> None:
+    _require(
+        set(payload) == keys,
+        f"contract {area}: keys must be exactly {sorted(keys)!r}",
+    )
 
 
 def _close(actual: object, expected: object, tolerance: float, area: str) -> None:
@@ -252,6 +310,14 @@ def validate_sha256_manifest(artifact_root: Path) -> None:
 def _validate_required_files(artifact_root: Path) -> None:
     missing = [relative for relative in REQUIRED if not (artifact_root / relative).is_file()]
     _require(not missing, f"contract required files: missing {missing!r}")
+    for relative in (
+        "recognition/enterprise_boundaries.parquet",
+        "sportshare/sportshare_results.parquet",
+    ):
+        _require(
+            (artifact_root / relative).stat().st_size > 0,
+            f"contract required parquet: {relative} must be non-empty",
+        )
 
 
 def _timestamp(value: object, area: str) -> datetime:
@@ -638,29 +704,321 @@ def _validate_scale(root: Path, expected: dict) -> None:
     )
 
 
-def _validate_metrics(root: Path, expected: dict) -> None:
-    validation = expected["validation"]
+def _validate_binary_metrics(root: Path, validation: dict) -> None:
+    area = "binary metrics"
     binary = _read_json(root, "validation/binary_metrics.json")
-    category = _read_json(root, "validation/category_metrics.json")
-    sportshare = _read_json(root, "validation/sportshare_cv.json")
-    for field, locked_value in validation["binary"].items():
-        _close(binary.get(field), locked_value, 1e-4, f"binary metrics {field}")
-    for field, locked_value in validation["category"].items():
-        _close(category.get(field), locked_value, 1e-4, f"category metrics {field}")
-    for field, locked_value in validation["sportshare"].items():
-        _close(sportshare.get(field), locked_value, 1e-4, f"sportshare metrics {field}")
+    for field in ("accuracy", "precision", "recall", "f1"):
+        _close(binary.get(field), validation["binary"][field], 1e-4, f"{area} {field}")
     _require(
         binary.get("binary_evaluable") == validation["binary_evaluable"],
-        "contract binary metrics: binary_evaluable mismatch",
-    )
-    _require(
-        category.get("category_evaluable") == validation["category_evaluable"],
-        "contract category metrics: category_evaluable mismatch",
+        f"contract {area}: binary_evaluable mismatch",
     )
     _require(
         binary.get("reference_labels") == validation["reference_labels"],
-        "contract binary metrics: reference_labels mismatch",
+        f"contract {area}: reference_labels mismatch",
     )
+
+    matrix = binary.get("confusion_matrix")
+    _require(isinstance(matrix, dict), f"contract {area}: confusion_matrix required")
+    matrix_keys = {"true_negative", "false_positive", "false_negative", "true_positive"}
+    _exact_keys(matrix, matrix_keys, f"{area} confusion_matrix")
+    counts = {key: _integer(matrix[key], f"{area} {key}") for key in matrix_keys}
+    _require(all(value >= 0 for value in counts.values()), f"contract {area}: counts must be non-negative")
+    _require(
+        sum(counts.values()) == validation["binary_evaluable"],
+        f"contract {area}: confusion matrix total mismatch",
+    )
+    _require(
+        counts["false_negative"] == validation["binary"]["false_negative"],
+        f"contract {area}: false_negative must be 1",
+    )
+    _require(
+        counts["true_positive"] + counts["false_negative"]
+        == validation["reference_labels"]["sport"],
+        f"contract {area}: positive-class support mismatch",
+    )
+    _require(
+        counts["true_negative"] + counts["false_positive"]
+        == validation["reference_labels"]["non_sport"],
+        f"contract {area}: negative-class support mismatch",
+    )
+    tp = counts["true_positive"]
+    tn = counts["true_negative"]
+    fp = counts["false_positive"]
+    fn = counts["false_negative"]
+    calculated_precision = tp / (tp + fp)
+    calculated_recall = tp / (tp + fn)
+    calculated = {
+        "accuracy": (tp + tn) / sum(counts.values()),
+        "precision": calculated_precision,
+        "recall": calculated_recall,
+        "f1": 2 * calculated_precision * calculated_recall / (
+            calculated_precision + calculated_recall
+        ),
+    }
+    for field, value in calculated.items():
+        _close(binary.get(field), value, 1e-4, f"{area} {field} consistency")
+
+
+def _validate_baselines(root: Path, validation: dict) -> None:
+    area = "baseline metrics"
+    rows = _read_csv(root, "validation/baselines.csv")
+    baselines = _key_rows(rows, "baseline_id", area)
+    locked = validation["baselines"]
+    _require(set(baselines) == set(locked["ids"]), f"contract {area}: baseline IDs mismatch")
+    for baseline_id, row in baselines.items():
+        sample_count = _integer(row["sample_count"], f"{area} {baseline_id} sample_count")
+        counts = {
+            field: _integer(row[field], f"{area} {baseline_id} {field}")
+            for field in ("true_negative", "false_positive", "false_negative", "true_positive")
+        }
+        _require(
+            all(value >= 0 for value in counts.values()),
+            f"contract {area} {baseline_id}: counts must be non-negative",
+        )
+        _require(
+            sample_count == validation["binary_evaluable"] == sum(counts.values()),
+            f"contract {area} {baseline_id}: confusion matrix total mismatch",
+        )
+        tp = counts["true_positive"]
+        tn = counts["true_negative"]
+        fp = counts["false_positive"]
+        fn = counts["false_negative"]
+        precision = tp / (tp + fp) if tp + fp else 0.0
+        recall = tp / (tp + fn) if tp + fn else 0.0
+        calculated = {
+            "accuracy": (tp + tn) / sample_count,
+            "precision": precision,
+            "recall": recall,
+            "f1": 2 * precision * recall / (precision + recall) if precision + recall else 0.0,
+        }
+        for field, value in calculated.items():
+            _rate(row[field], f"{area} {baseline_id} {field}")
+            _close(row[field], value, 1e-4, f"{area} {baseline_id} {field} consistency")
+    _require(
+        _integer(baselines["traditional_direct_code"]["false_negative"], f"{area} traditional FN")
+        == locked["traditional_direct_code_false_negative"],
+        f"contract {area}: traditional direct-code false_negative must be 24",
+    )
+    _require(
+        _integer(baselines["sportfusion"]["false_negative"], f"{area} SportFusion FN")
+        == locked["sportfusion_false_negative"],
+        f"contract {area}: SportFusion false_negative must be 1",
+    )
+    for field in ("accuracy", "precision", "recall", "f1"):
+        _close(
+            baselines["sportfusion"][field],
+            validation["binary"][field],
+            1e-4,
+            f"{area} SportFusion {field}",
+        )
+
+
+def _validate_category_metrics(root: Path, expected: dict) -> None:
+    area = "category metrics"
+    validation = expected["validation"]
+    category = _read_json(root, "validation/category_metrics.json")
+    for field in ("accuracy", "macro_f1"):
+        _close(category.get(field), validation["category"][field], 1e-4, f"{area} {field}")
+    _require(
+        category.get("correct") == validation["category"]["correct"],
+        f"contract {area}: correct count mismatch",
+    )
+    _require(
+        category.get("category_evaluable") == validation["category_evaluable"],
+        f"contract {area}: category_evaluable mismatch",
+    )
+    category_keys = set(expected["scale"]["category_scale_100m_cny"])
+    matrix = category.get("confusion_matrix")
+    per_class = category.get("per_class")
+    _require(isinstance(matrix, dict), f"contract {area}: confusion_matrix required")
+    _require(isinstance(per_class, dict), f"contract {area}: per_class required")
+    _require(set(matrix) == category_keys, f"contract {area}: confusion row keys mismatch")
+    _require(set(per_class) == category_keys, f"contract {area}: per-class keys mismatch")
+
+    matrix_counts = {}
+    for actual, row in matrix.items():
+        _require(isinstance(row, dict), f"contract {area}: confusion row {actual!r} must be an object")
+        _require(set(row) == category_keys, f"contract {area}: confusion column keys mismatch")
+        matrix_counts[actual] = {
+            predicted: _integer(value, f"{area} confusion {actual}/{predicted}")
+            for predicted, value in row.items()
+        }
+        _require(
+            all(value >= 0 for value in matrix_counts[actual].values()),
+            f"contract {area}: confusion counts must be non-negative",
+        )
+    total = sum(sum(row.values()) for row in matrix_counts.values())
+    diagonal = sum(matrix_counts[key][key] for key in category_keys)
+    _require(total == validation["category_evaluable"], f"contract {area}: confusion total must be 184")
+    _require(diagonal == validation["category"]["correct"], f"contract {area}: diagonal must be 171")
+
+    derived_f1 = []
+    per_class_keys = {"precision", "recall", "f1", "support"}
+    for key in category_keys:
+        metrics = per_class[key]
+        _require(isinstance(metrics, dict), f"contract {area}: per-class {key!r} must be an object")
+        _exact_keys(metrics, per_class_keys, f"{area} per-class {key}")
+        support = sum(matrix_counts[key].values())
+        predicted = sum(matrix_counts[actual][key] for actual in category_keys)
+        true_positive = matrix_counts[key][key]
+        precision = true_positive / predicted if predicted else 0.0
+        recall = true_positive / support if support else 0.0
+        f1 = 2 * precision * recall / (precision + recall) if precision + recall else 0.0
+        _require(
+            _integer(metrics["support"], f"{area} per-class {key} support") == support,
+            f"contract {area}: per-class support mismatch",
+        )
+        for field, value in (("precision", precision), ("recall", recall), ("f1", f1)):
+            _rate(metrics[field], f"{area} per-class {key} {field}")
+            _close(metrics[field], value, 1e-4, f"{area} per-class {key} {field} consistency")
+        derived_f1.append(f1)
+    _require(
+        sum(_integer(item["support"], f"{area} support") for item in per_class.values())
+        == validation["category_evaluable"],
+        f"contract {area}: per-class supports must sum to 184",
+    )
+    _close(category.get("accuracy"), diagonal / total, 1e-4, f"{area} accuracy consistency")
+    _close(category.get("macro_f1"), sum(derived_f1) / len(derived_f1), 1e-3, f"{area} macro-F1 consistency")
+
+
+def _validate_ablation(root: Path, validation: dict) -> None:
+    area = "ablation"
+    rows = _read_csv(root, "validation/ablation.csv")
+    keyed = _key_rows(rows, "ablation_id", area)
+    expected_ids = {"remove_w1", "remove_w2", "remove_w3", "remove_w4"}
+    _require(set(keyed) == expected_ids, f"contract {area}: IDs mismatch")
+    for index in range(1, 5):
+        row = keyed[f"remove_w{index}"]
+        _require(row["removed_component"] == f"W{index}", f"contract {area}: component mismatch")
+        _rate(row["recall"], f"{area} remove W{index} recall")
+        _rate(row["f1"], f"{area} remove W{index} F1")
+    locked = validation["ablation"]
+    _close(keyed["remove_w3"]["recall"], locked["remove_w3_recall"], 1e-4, f"{area} W3 recall")
+    _close(keyed["remove_w3"]["f1"], locked["remove_w3_f1"], 1e-4, f"{area} W3 F1")
+    for component in ("w1", "w2", "w4"):
+        _close(
+            keyed[f"remove_{component}"]["f1"],
+            locked["remove_w1_w2_w4_f1_approx"],
+            locked["approx_tolerance"],
+            f"{area} remove {component.upper()} approximate F1",
+        )
+
+
+def _validate_threshold_sweep(root: Path, validation: dict) -> None:
+    area = "threshold sweep"
+    rows = _read_csv(root, "validation/threshold_sweep.csv")
+    keyed = {}
+    for row in rows:
+        threshold = _rate(row["threshold"], f"{area} threshold")
+        _require(threshold not in keyed, f"contract {area}: duplicate threshold")
+        keyed[threshold] = row
+        for field in ("precision", "recall", "f1"):
+            _rate(row[field], f"{area} {threshold:.2f} {field}")
+        for field in ("candidate_count", "false_negative", "false_positive"):
+            value = _integer(row[field], f"{area} {threshold:.2f} {field}")
+            _require(value >= 0, f"contract {area}: {field} must be non-negative")
+    locked = validation["threshold_sweep"]
+    required = set(locked["required_thresholds"])
+    _require(required <= set(keyed), f"contract {area}: missing required thresholds")
+    _require(
+        _integer(keyed[0.10]["candidate_count"], f"{area} 0.10 candidate_count")
+        == locked["candidate_count_at_0_10"],
+        f"contract {area}: 0.10 candidate_count must be 8950",
+    )
+    start_f1 = keyed[locked["plateau_start"]]["f1"]
+    end_f1 = keyed[locked["plateau_end"]]["f1"]
+    _close(start_f1, end_f1, locked["f1_plateau_tolerance"], f"{area} 0.05-0.10 F1 plateau")
+
+
+def _validate_sportshare_cv(root: Path, validation: dict) -> None:
+    area = "sportshare CV"
+    payload = _read_json(root, "validation/sportshare_cv.json")
+    locked = validation["sportshare"]
+    for field in ("algorithm", "training_sample_count", "target"):
+        _require(payload.get(field) == locked[field], f"contract {area}: {field} mismatch")
+    feature_version = payload.get("feature_version")
+    _require(
+        isinstance(feature_version, str) and feature_version.strip(),
+        f"contract {area}: feature_version must be non-empty",
+    )
+    _require(payload.get("cv") == locked["cv"], f"contract {area}: CV protocol mismatch")
+    _require(payload.get("interval") == locked["interval"], f"contract {area}: interval mismatch")
+    _require(
+        payload.get("forbidden_features") == locked["forbidden_features"],
+        f"contract {area}: forbidden_features mismatch",
+    )
+    q90 = _rate(payload.get("q90_abs_error"), f"{area} q90_abs_error")
+    _require(0.0 <= q90 <= 1.0, f"contract {area}: q90_abs_error must be within [0, 1]")
+    metrics = payload.get("metrics")
+    _require(isinstance(metrics, dict), f"contract {area}: metrics required")
+    _exact_keys(metrics, set(locked["metrics"]), f"{area} metrics")
+    for field, locked_value in locked["metrics"].items():
+        _close(metrics.get(field), locked_value, 1e-4, f"{area} {field}")
+
+
+def _validate_benchmark(root: Path, validation: dict) -> None:
+    area = "benchmark"
+    payload = _read_json(root, "audit/benchmark.json")
+    keys = {
+        "status",
+        "historical_single_run_seconds",
+        "warmups",
+        "repeats",
+        "peak_memory_mb",
+        "median_seconds",
+        "mean_seconds",
+        "std_seconds",
+        "throughput_records_per_second",
+        "raw_logs",
+    }
+    _exact_keys(payload, keys, area)
+    locked = validation["benchmark"]
+    _close(
+        payload["historical_single_run_seconds"],
+        locked["historical_single_run_seconds"],
+        1e-9,
+        f"{area} historical runtime",
+    )
+    for field in ("warmups", "repeats"):
+        _require(payload[field] == locked[field], f"contract {area}: {field} mismatch")
+    measurement_fields = (
+        "peak_memory_mb",
+        "median_seconds",
+        "mean_seconds",
+        "std_seconds",
+        "throughput_records_per_second",
+    )
+    status = payload.get("status")
+    _require(status in {"not_measured", "measured"}, f"contract {area}: invalid status")
+    if status == "not_measured":
+        _require(
+            all(payload[field] is None for field in measurement_fields),
+            f"contract {area}: not_measured numeric fields must be null",
+        )
+        _require(payload["raw_logs"] in (None, []), f"contract {area}: unmeasured raw_logs must be null/empty")
+        return
+    for field in measurement_fields:
+        value = _number(payload[field], f"{area} measured {field}")
+        _require(value >= 0.0, f"contract {area}: measured {field} must be non-negative")
+    raw_logs = payload["raw_logs"]
+    _require(
+        isinstance(raw_logs, list)
+        and bool(raw_logs)
+        and all(isinstance(item, str) and item.strip() for item in raw_logs),
+        f"contract {area}: measured raw_logs must be a non-empty string list",
+    )
+
+
+def _validate_metrics(root: Path, expected: dict) -> None:
+    validation = expected["validation"]
+    _validate_binary_metrics(root, validation)
+    _validate_baselines(root, validation)
+    _validate_category_metrics(root, expected)
+    _validate_ablation(root, validation)
+    _validate_threshold_sweep(root, validation)
+    _validate_sportshare_cv(root, validation)
+    _validate_benchmark(root, validation)
 
 
 def _validate_audit(root: Path, expected: dict) -> None:
