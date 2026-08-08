@@ -1,5 +1,6 @@
 import asyncio
 import socket
+from asyncio import proactor_events
 
 import pytest
 
@@ -18,6 +19,31 @@ assert getattr(
 
 class _NeverNetworkSocket:
     """A socket-shaped object that makes accidental real I/O impossible."""
+
+
+class _NeverNetworkDatagramTransport:
+    """Enough transport state to exercise the real method without doing I/O."""
+
+    def __init__(self):
+        self._address = None
+        self._conn_lost = 0
+        self._buffer = []
+        self._buffer_size = 0
+        self._write_fut = None
+        self.loop_writing_calls = 0
+
+    def _loop_writing(self):
+        self.loop_writing_calls += 1
+
+    def _maybe_pause_protocol(self):
+        return None
+
+
+_PROACTOR_DATAGRAM_TRANSPORT = getattr(
+    proactor_events,
+    "_ProactorDatagramTransport",
+    None,
+)
 
 
 @pytest.mark.parametrize(
@@ -336,9 +362,84 @@ def test_proactor_guard_delegates_loopback_without_real_network(monkeypatch):
     ]
 
 
+@pytest.mark.skipif(
+    _PROACTOR_DATAGRAM_TRANSPORT is None,
+    reason="Windows Proactor datagram transport unavailable",
+)
+@pytest.mark.parametrize(
+    "address",
+    [
+        ("198.51.100.1", 53),
+        ("2001:db8::1", 53, 0, 0),
+        ("example.com", 53),
+    ],
+)
+def test_proactor_datagram_transport_rejects_external_destinations(address):
+    transport = _NeverNetworkDatagramTransport()
+
+    with pytest.raises(RuntimeError, match="tests must not access external network"):
+        _PROACTOR_DATAGRAM_TRANSPORT.sendto(transport, b"payload", address)
+
+    assert transport.loop_writing_calls == 0
+
+
+@pytest.mark.skipif(
+    _PROACTOR_DATAGRAM_TRANSPORT is None,
+    reason="Windows Proactor datagram transport unavailable",
+)
+@pytest.mark.parametrize(
+    "address",
+    [
+        ("127.0.0.1", 53),
+        ("::1", 53, 0, 0),
+        ("localhost", 53),
+        None,
+    ],
+)
+def test_proactor_datagram_transport_delegates_safe_destinations(
+    address,
+    monkeypatch,
+):
+    calls = []
+
+    def sendto_spy(*args, **kwargs):
+        calls.append((args, kwargs))
+        return "sendto"
+
+    monkeypatch.setitem(
+        project_conftest._NETWORK_ORIGINALS,
+        "proactor_datagram_transport_sendto",
+        sendto_spy,
+    )
+    transport = _NeverNetworkDatagramTransport()
+
+    assert (
+        _PROACTOR_DATAGRAM_TRANSPORT.sendto(transport, b"payload", address)
+        == "sendto"
+    )
+    assert calls == [((transport, b"payload", address), {})]
+
+
+@pytest.mark.skipif(
+    _PROACTOR_DATAGRAM_TRANSPORT is None,
+    reason="Windows Proactor datagram transport unavailable",
+)
+def test_proactor_datagram_transport_guard_has_marker():
+    assert getattr(
+        _PROACTOR_DATAGRAM_TRANSPORT.sendto,
+        "__sportfusion_network_guard__",
+        False,
+    )
+
+
 def test_network_guard_install_and_restore_are_idempotent():
     active_patch = project_conftest._NETWORK_MONKEYPATCH
     original_connect = project_conftest._NETWORK_ORIGINALS["connect"]
+    original_proactor_datagram_sendto = None
+    if _PROACTOR_DATAGRAM_TRANSPORT is not None:
+        original_proactor_datagram_sendto = project_conftest._NETWORK_ORIGINALS[
+            "proactor_datagram_transport_sendto"
+        ]
 
     project_conftest._install_network_guard()
     assert project_conftest._NETWORK_MONKEYPATCH is active_patch
@@ -347,8 +448,19 @@ def test_network_guard_install_and_restore_are_idempotent():
         project_conftest._restore_network_guard()
         assert project_conftest._NETWORK_MONKEYPATCH is None
         assert socket.socket.connect is original_connect
+        if _PROACTOR_DATAGRAM_TRANSPORT is not None:
+            assert (
+                _PROACTOR_DATAGRAM_TRANSPORT.sendto
+                is original_proactor_datagram_sendto
+            )
         project_conftest._restore_network_guard()
     finally:
         project_conftest._install_network_guard()
 
     assert getattr(socket.socket.connect, "__sportfusion_network_guard__", False)
+    if _PROACTOR_DATAGRAM_TRANSPORT is not None:
+        assert getattr(
+            _PROACTOR_DATAGRAM_TRANSPORT.sendto,
+            "__sportfusion_network_guard__",
+            False,
+        )

@@ -2,6 +2,7 @@ import asyncio
 import ipaddress
 import socket
 import sys
+from asyncio import proactor_events
 from pathlib import Path
 
 import pytest
@@ -178,6 +179,16 @@ async def _blocked_proactor_sock_sendto(loop, sock, data, address):
     )
 
 
+@_guard_wrapper
+def _blocked_proactor_datagram_transport_sendto(transport, data, addr=None):
+    _reject_external("ProactorDatagramTransport.sendto", addr)
+    return _NETWORK_ORIGINALS["proactor_datagram_transport_sendto"](
+        transport,
+        data,
+        addr,
+    )
+
+
 def _install_network_guard():
     global _NETWORK_MONKEYPATCH
 
@@ -206,6 +217,17 @@ def _install_network_guard():
     }
     if hasattr(socket.socket, "sendmsg"):
         targets["sendmsg"] = (socket.socket, "sendmsg", _blocked_sendmsg)
+    proactor_datagram_transport = getattr(
+        proactor_events,
+        "_ProactorDatagramTransport",
+        None,
+    )
+    if proactor_datagram_transport is not None:
+        targets["proactor_datagram_transport_sendto"] = (
+            proactor_datagram_transport,
+            "sendto",
+            _blocked_proactor_datagram_transport_sendto,
+        )
     proactor_event_loop = getattr(asyncio, "ProactorEventLoop", None)
     if proactor_event_loop is not None:
         targets["proactor_sock_connect"] = (
