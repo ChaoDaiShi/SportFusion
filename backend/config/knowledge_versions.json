@@ -1,0 +1,21 @@
+{
+  "meta": {
+    "version": "SPORTFUSION-KNOWLEDGE-2026-08",
+    "name": "SportFusion Knowledge Version Manifest",
+    "description": "Central version registry for all knowledge artifacts and feature schemas",
+    "last_updated": "2026-08-08"
+  },
+  "versions": {
+    "dictionary_version": "SPORT-KNOWLEDGE-2026-08",
+    "industry_code_map_version": "INDUSTRY-CODE-2026-08",
+    "category_taxonomy_version": "TAXONOMY-2026-08",
+    "feature_schema_version": "FEATURE-SCHEMA-2026-08",
+    "parameter_version": "MODEL-PARAMS-2026-08"
+  },
+  "artifacts": {
+    "sports_dictionary": "backend/knowledge/sports_dictionary.json",
+    "industry_codes": "backend/knowledge/industry_codes.json",
+    "model_params": "backend/config/model_params.json",
+    "taxonomy": "backend/domain/taxonomy.py"
+  }
+}
