@@ -22,6 +22,8 @@
 
 ## Migration ownership
 
+- Phase 1 的首个 revision 必须设置 `down_revision = "1d865fc0001"`。
+  之后的 revision 必须指向当时最新的后继 revision/head，不能始终回指此基线 revision。
 - Phase 1 separates SportScore from legacy `sport_ratio`.
 - Phase 2 versions the dictionary and industry-code map.
 - Phase 3 adds immutable SportShare model outputs and fallback provenance.
@@ -33,8 +35,21 @@
 
 ## Safe commands
 
-`upgrade head` 会执行迁移脚本并创建或变更数据库结构，只能用于新建数据库或明确允许变更的临时数据库。例如：先指定一个临时或新数据库 URL，再运行 `uv run alembic upgrade head`。
+`upgrade head` 会执行迁移脚本并创建或变更数据库结构，只能用于新建数据库或明确可丢弃的临时数据库。以下 PowerShell 示例会解析一个新的临时数据库路径，并通过 `-x database_url=...` 显式传入 URL：
 
-`stamp head` 不执行结构迁移，只在数据库中登记当前 Alembic revision。它用于已经具备这 14 张基线表的既有数据库。登记前必须先复制数据库、核对副本的表和业务行数，再只对副本运行 `uv run alembic stamp head`。
+```powershell
+$task5NewDb = Join-Path ([System.IO.Path]::GetTempPath()) "sportfusion-task5-new-$([guid]::NewGuid().ToString('N')).db"
+$task5NewDbUrl = "sqlite:///$($task5NewDb.Replace('\', '/'))"
+uv run alembic -x "database_url=$task5NewDbUrl" upgrade head
+```
 
-工作区运行库 `backend/sports_industry.db` 只能作为复制来源读取。禁止对它直接执行 `upgrade`、`stamp`、降级、删除或任何迁移试验；所有试验都必须针对临时数据库或复制件。
+`stamp head` 不执行结构迁移，只在已具备 14 张基线表的数据库中登记当前 Alembic revision。先复制数据库并核对副本的表和业务行数，再仅对该副本执行以下命令：
+
+```powershell
+$task5StampDb = Join-Path ([System.IO.Path]::GetTempPath()) "sportfusion-task5-stamp-$([guid]::NewGuid().ToString('N')).db"
+Copy-Item -LiteralPath .\backend\sports_industry.db -Destination $task5StampDb
+$task5StampDbUrl = "sqlite:///$($task5StampDb.Replace('\', '/'))"
+uv run alembic -x "database_url=$task5StampDbUrl" stamp head
+```
+
+工作区运行库 `backend/sports_industry.db` 只能作为复制来源读取，绝不能将 `-x database_url=...` 指向它。禁止对它直接执行 `upgrade`、`stamp`、降级、删除或任何迁移试验；所有试验都必须针对临时数据库或复制件。
