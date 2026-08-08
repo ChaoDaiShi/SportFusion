@@ -2,25 +2,43 @@
 体育业务识别算法 v2.0
   - jieba 分词 + 关键词匹配（271词，9大业态）
   - 业务边界解析：拆分多条业务线，逐条分类
-  - 多维度比重测算：业务范围占比 + 关键词密度 + 行业代码权重 + 业态覆盖度
+  - 多维度证据评分：业务范围覆盖率 + 关键词密度 + 行业代码权重 + 业态覆盖度
   - 跨界经营判定
+
+SportScore = 体育业务证据评分 [0, 1]，不表示营收占比。
+SportShare = 体育经营活动结构比重估计值，独立于 SportScore。
 """
 import re
-from typing import List, Dict, Any, Tuple, Optional
-from utils.text_tokenizer import (
-    tokenize, match_sport_keywords, match_sport_by_category,
-    get_sport_categories, get_category_for_word,
+from typing import Any
+
+from domain.evidence_relation import (
+    EvidenceRelation,
+    derive_code_text_consistency,
+    derive_confidence,
+    derive_crossover_type,
+    derive_evidence_relation,
+    is_sport_candidate,
+)
+from domain.industry_code import normalize_industry_code
+from utils.industry_code import (
+    get_code_type,
 )
 from utils.industry_code import (
-    get_code_type, get_sport_category as get_code_sport_category,
-    is_direct_sport_code,
+    get_sport_category as get_code_sport_category,
+)
+from utils.text_tokenizer import (
+    get_category_for_word,
+    get_sport_categories,
+    match_sport_by_category,
+    match_sport_keywords,
+    tokenize,
 )
 
 # ============================================================
 # 业务线解析
 # ============================================================
 
-def parse_business_lines(text: str) -> List[str]:
+def parse_business_lines(text: str) -> list[str]:
     """
     将「主要业务活动」文本拆分为独立的业务线
     分隔符：逗号、分号、顿号、斜杠、换行、句号等
@@ -42,7 +60,7 @@ def parse_business_lines(text: str) -> List[str]:
     return unique_lines
 
 
-def classify_business_line(line: str) -> Dict[str, Any]:
+def classify_business_line(line: str) -> dict[str, Any]:
     """
     判断单条业务线是否属于体育业务
 
@@ -83,9 +101,9 @@ def classify_business_line(line: str) -> Dict[str, Any]:
 
 def calculate_sport_ratio(
     text: str,
-    industry_code: Optional[int] = None,
-    name: Optional[str] = None,
-) -> Dict[str, Any]:
+    industry_code: int | None = None,
+    name: str | None = None,
+) -> dict[str, Any]:
     """
     多维度特征加权评分，量化企业体育业务在整体经营中的占比
 
@@ -100,6 +118,9 @@ def calculate_sport_ratio(
     """
     if not text:
         return _empty_ratio_result()
+
+    # Normalize industry code to int|None for consistent handling
+    norm_code = normalize_industry_code(industry_code)
 
     # --- W1: 业务范围占比 ---
     business_lines = parse_business_lines(text)
@@ -117,8 +138,8 @@ def calculate_sport_ratio(
     w2 = min(sport_hit_count / token_count * 10, 1.0)  # 归一化
 
     # --- W3: 行业代码权重 ---
-    if industry_code is not None:
-        code_type = get_code_type(industry_code)
+    if norm_code is not None:
+        code_type = get_code_type(norm_code)
         if code_type == "direct":
             w3 = 0.85
         elif code_type == "indirect":
@@ -142,7 +163,7 @@ def calculate_sport_ratio(
     ratio = min(ratio, 1.0)  # 上限 100%
 
     # 确定主要体育业态
-    category_counts: Dict[str, int] = {}
+    category_counts: dict[str, int] = {}
     for sl in sport_lines:
         cat = sl["category"]
         if cat:
@@ -171,7 +192,7 @@ def calculate_sport_ratio(
     }
 
 
-def _empty_ratio_result() -> Dict[str, Any]:
+def _empty_ratio_result() -> dict[str, Any]:
     return {
         "sport_ratio": 0.0,
         "total_business_lines": 0,
@@ -193,7 +214,7 @@ def _determine_code_text_consistency(
     code_type: str,
     is_sport: bool,
     sport_ratio: float,
-    keywords: List[str],
+    keywords: list[str],
 ) -> str:
     """
     判定行业代码与业务文本描述的一致性
@@ -229,8 +250,8 @@ def _determine_code_text_consistency(
 
 def recognize_sport_business(
     business_text: str,
-    industry_code: Optional[int] = None,
-    enterprise_name: Optional[str] = None,
+    industry_code: int | None = None,
+    enterprise_name: str | None = None,
 ) -> dict:
     """
     综合识别：企业体育业态分类 + 业务边界 + 比重测算
@@ -242,19 +263,25 @@ def recognize_sport_business(
             keywords, ...
         }
     """
+    # Normalize industry code to int|None for consistent handling
+    norm_code = normalize_industry_code(industry_code)
+
     if not business_text:
         # 空文本时，直接体育代码仍判定为体育（代码是最强先验信号）
-        code_type = get_code_type(industry_code) if industry_code else "none"
+        code_type = get_code_type(norm_code) if norm_code else "none"
         if code_type == "direct":
-            code_cat = get_code_sport_category(industry_code) or ""
+            code_cat = get_code_sport_category(norm_code) or ""
             return {
                 "sport_category": code_cat,
                 "is_sport": True,
-                "sport_ratio": 0.2125,  # 0.25*0.85 = 仅代码权重
+                "sport_score": 0.2125,  # 0.25*0.85 = 仅代码权重
+                "sport_ratio": 0.2125,   # deprecated：保留兼容
                 "confidence": 0.85,
                 "is_crossover": False,
                 "crossover_type": "",
                 "code_type": code_type,
+                "code_text_consistency": "partial",
+                "evidence_relation": EvidenceRelation.DIRECT_CODE_TEXT_CONFLICT.value,
                 "total_business_lines": 0,
                 "sport_business_lines": 0,
                 "business_lines": [],
@@ -268,11 +295,14 @@ def recognize_sport_business(
         return {
             "sport_category": "非体育",
             "is_sport": False,
-            "sport_ratio": 0.0,
+            "sport_score": 0.0,
+            "sport_ratio": 0.0,  # deprecated：保留兼容
             "confidence": 0.0,
             "is_crossover": False,
             "crossover_type": "",
             "code_type": code_type,
+            "code_text_consistency": "consistent" if code_type == "none" else "unknown",
+            "evidence_relation": EvidenceRelation.NO_SPORT_EVIDENCE.value,
             "total_business_lines": 0,
             "sport_business_lines": 0,
             "business_lines": [],
@@ -284,79 +314,75 @@ def recognize_sport_business(
             "all_sport_categories": [],
         }
 
-    # 比重测算（包含业务边界解析）
-    ratio_result = calculate_sport_ratio(business_text, industry_code, enterprise_name)
+    # 证据评分测算（包含业务边界解析）
+    ratio_result = calculate_sport_ratio(business_text, norm_code, enterprise_name)
 
-    # 融合行业代码信息判断最终分类
-    code_type = get_code_type(industry_code) if industry_code else "none"
-    sport_ratio = ratio_result["sport_ratio"]
+    # 融合行业代码信息判断最终分类 — 使用统一 evidence_relation
+    code_type = get_code_type(norm_code) if norm_code else "none"
+    sport_score = ratio_result["sport_ratio"]
     primary_category = ratio_result["primary_sport_category"]
 
-    # 确定最终分类
-    # 阈值: 体育占比 >= 10% 或行业代码是直接体育代码
-    if sport_ratio >= 0.10 and primary_category:
-        sport_category = primary_category
-        is_sport = True
-    elif sport_ratio >= 0.05 and code_type == "direct":
-        sport_category = get_code_sport_category(industry_code) or primary_category or ""
-        is_sport = True
-    elif code_type == "direct":
-        # 直接体育代码，即使文本不匹配也标记（纯代码驱动）
-        sport_category = get_code_sport_category(industry_code) or ""
-        is_sport = True
+    # ---- 统一证据关系 ----
+    keywords = ratio_result["sport_keywords_matched"]
+    text_evidence = len(keywords) > 0
+    relation = derive_evidence_relation(
+        code_type=code_type,
+        text_evidence=text_evidence,
+        sport_score=sport_score,
+        keyword_count=len(keywords),
+    )
+
+    # ---- 统一候选判定 ----
+    is_sport = is_sport_candidate(
+        sport_score=sport_score,
+        relation=relation,
+        code_type=code_type,
+        primary_category=primary_category,
+    )
+
+    # 确定最终业态分类
+    if is_sport:
+        if primary_category:
+            sport_category = primary_category
+        elif code_type == "direct":
+            sport_category = get_code_sport_category(norm_code) or ""
+        else:
+            sport_category = ""
     else:
         sport_category = "非体育"
-        is_sport = False
 
-    # 置信度
-    if code_type == "direct" and sport_ratio >= 0.3:
-        confidence = 0.95
-    elif code_type == "direct" and sport_ratio >= 0.1:
-        confidence = 0.85
-    elif sport_ratio >= 0.5:
-        confidence = 0.90
-    elif sport_ratio >= 0.2:
-        confidence = 0.75
-    elif sport_ratio >= 0.1:
-        confidence = 0.60
-    elif code_type == "direct":
-        confidence = 0.55  # 直接代码，文本无匹配
-    else:
-        confidence = 0.0
-
-    # 跨界判定
-    is_crossover = False
-    crossover_type = ""
-    if is_sport and code_type == "none":
-        is_crossover = True
-        crossover_type = "纯跨界（行业代码非体育，文本有体育业务）"
-    elif is_sport and code_type == "indirect":
-        is_crossover = True
-        crossover_type = "潜在跨界（间接行业代码，文本有体育业务）"
-    elif is_sport and code_type == "direct" and ratio_result["total_business_lines"] > 1:
-        # 直接体育代码但有多个业务线，可能存在非体育业务
-        non_sport_count = ratio_result["total_business_lines"] - ratio_result["sport_business_lines"]
-        if non_sport_count > 0:
-            is_crossover = True
-            crossover_type = f"多元经营（体育+{non_sport_count}条非体育业务）"
-
-    # 代码-文本一致性判定
-    code_text_consistency = _determine_code_text_consistency(
-        code_type=code_type,
+    # ---- 从 evidence_relation 派生所有下游字段 ----
+    confidence = derive_confidence(relation, sport_score)
+    code_text_consistency = derive_code_text_consistency(relation)
+    crossover_type = derive_crossover_type(
+        relation=relation,
+        sport_lines_count=ratio_result["sport_business_lines"],
+        total_lines=ratio_result["total_business_lines"],
         is_sport=is_sport,
-        sport_ratio=sport_ratio,
-        keywords=ratio_result["sport_keywords_matched"],
     )
+    is_crossover = bool(crossover_type)
+
+    # ---- 保留旧 consistency 函数为兼容 fallback ----
+    # 当 relation 返回 unknown 时回退到旧逻辑
+    if code_text_consistency == "unknown":
+        code_text_consistency = _determine_code_text_consistency(
+            code_type=code_type,
+            is_sport=is_sport,
+            sport_ratio=sport_score,
+            keywords=keywords,
+        )
 
     return {
         "sport_category": sport_category,
         "is_sport": is_sport,
-        "sport_ratio": sport_ratio,
+        "sport_score": sport_score,     # 正式字段：体育业务证据评分
+        "sport_ratio": sport_score,      # deprecated：保留兼容旧接口
         "confidence": round(confidence, 2),
         "is_crossover": is_crossover,
         "crossover_type": crossover_type,
         "code_type": code_type,
         "code_text_consistency": code_text_consistency,
+        "evidence_relation": relation.value,
         "total_business_lines": ratio_result["total_business_lines"],
         "sport_business_lines": ratio_result["sport_business_lines"],
         "business_lines": ratio_result["business_lines"],
@@ -385,7 +411,7 @@ def batch_recognize(enterprises: list) -> list:
     return results
 
 
-def batch_recognize_full(enterprises: List[Dict]) -> List[Dict]:
+def batch_recognize_full(enterprises: list[dict]) -> list[dict]:
     """
     全量批量识别（包含完整业务边界+比重信息）
 
@@ -406,22 +432,22 @@ def batch_recognize_full(enterprises: List[Dict]) -> List[Dict]:
     return results
 
 
-def get_recognition_stats(results: List[Dict]) -> Dict:
+def get_recognition_stats(results: list[dict]) -> dict:
     """识别结果统计"""
     total = len(results)
     sport_count = sum(1 for r in results if r.get("is_sport"))
     crossover_count = sum(1 for r in results if r.get("is_crossover"))
 
     # 类别分布
-    cat_dist: Dict[str, int] = {}
+    cat_dist: dict[str, int] = {}
     for r in results:
         cat = r.get("sport_category", "非体育")
         cat_dist[cat] = cat_dist.get(cat, 0) + 1
 
-    # 比重区间分布
+    # SportScore 区间分布
     ratio_bins = {"0": 0, "0-0.2": 0, "0.2-0.5": 0, "0.5-0.8": 0, "0.8-1.0": 0}
     for r in results:
-        ratio = r.get("sport_ratio", 0)
+        ratio = r.get("sport_score", r.get("sport_ratio", 0))
         if ratio == 0:
             ratio_bins["0"] += 1
         elif ratio <= 0.2:
@@ -434,15 +460,15 @@ def get_recognition_stats(results: List[Dict]) -> Dict:
             ratio_bins["0.8-1.0"] += 1
 
     # 跨界类型分布
-    crossover_types: Dict[str, int] = {}
+    crossover_types: dict[str, int] = {}
     for r in results:
         ct = r.get("crossover_type", "")
         if ct:
             crossover_types[ct] = crossover_types.get(ct, 0) + 1
 
-    # 平均比重
-    sport_ratios = [r.get("sport_ratio", 0) for r in results if r.get("is_sport")]
-    avg_ratio = sum(sport_ratios) / len(sport_ratios) if sport_ratios else 0.0
+    # 平均 SportScore
+    sport_scores = [r.get("sport_score", r.get("sport_ratio", 0)) for r in results if r.get("is_sport")]
+    avg_score = sum(sport_scores) / len(sport_scores) if sport_scores else 0.0
 
     return {
         "total": total,
@@ -453,6 +479,8 @@ def get_recognition_stats(results: List[Dict]) -> Dict:
         "category_distribution": cat_dist,
         "ratio_distribution": ratio_bins,
         "crossover_types": crossover_types,
-        "avg_sport_ratio": round(avg_ratio, 4),
-        "avg_sport_ratio_pct": round(avg_ratio * 100, 2),
+        "avg_sport_score": round(avg_score, 4),
+        "avg_sport_score_pct": round(avg_score * 100, 2),
+        "avg_sport_ratio": round(avg_score, 4),  # deprecated: legacy compat
+        "avg_sport_ratio_pct": round(avg_score * 100, 2),  # deprecated: legacy compat
     }

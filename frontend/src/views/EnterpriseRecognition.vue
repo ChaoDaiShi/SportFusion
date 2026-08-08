@@ -32,11 +32,30 @@
               </div>
               <el-descriptions :column="3" border style="margin-top:12px">
                 <el-descriptions-item label="置信度">{{ (singleResult.confidence * 100).toFixed(1) }}%</el-descriptions-item>
-                <el-descriptions-item label="体育业务占比">{{ (singleResult.sport_ratio * 100).toFixed(1) }}%</el-descriptions-item>
+                <el-descriptions-item label="SportScore">
+                  {{ (singleResult.sport_score != null ? singleResult.sport_score * 100 : (singleResult.sport_ratio || 0) * 100).toFixed(1) }}%
+                  <el-tooltip content="体育业务证据评分，用于衡量体育业务证据强度，不表示营业收入占比" placement="top">
+                    <el-icon style="margin-left:4px;cursor:help"><QuestionFilled /></el-icon>
+                  </el-tooltip>
+                </el-descriptions-item>
+                <el-descriptions-item label="候选状态">
+                  <el-tag :type="singleResult.is_sport ? 'success' : 'info'" size="small">
+                    {{ singleResult.is_sport ? '体育相关候选企业' : '非体育企业' }}
+                  </el-tag>
+                </el-descriptions-item>
+                <el-descriptions-item label="行业代码关系">
+                  {{ singleResult.code_type === 'direct' ? '直接体育相关' : singleResult.code_type === 'indirect' ? '间接体育相关' : '非体育代码' }}
+                </el-descriptions-item>
+                <el-descriptions-item label="代码—文本关系">
+                  {{ { consistent: '相互支持', partial: '部分匹配', conflict: '存在冲突', unknown: '无法判断' }[singleResult.code_text_consistency] || singleResult.code_text_consistency }}
+                </el-descriptions-item>
                 <el-descriptions-item label="是否跨界">
                   <el-tag :type="singleResult.is_crossover ? 'warning' : 'info'" size="small">
                     {{ singleResult.is_crossover ? '是' : '否' }}
                   </el-tag>
+                </el-descriptions-item>
+                <el-descriptions-item label="跨界类型" :span="singleResult.crossover_type ? 1 : 0" v-if="singleResult.crossover_type">
+                  {{ singleResult.crossover_type }}
                 </el-descriptions-item>
                 <el-descriptions-item label="业务边界">
                   共 {{ singleResult.total_business_lines }} 条业务线 | 体育 {{ singleResult.sport_business_lines }} 条
@@ -104,11 +123,11 @@
             <span v-if="row.result">{{ (row.result.confidence * 100).toFixed(1) }}%</span>
           </template>
         </el-table-column>
-        <el-table-column label="体育占比" width="100">
+        <el-table-column label="SportScore" width="100">
           <template #default="{ row }">
             <el-progress v-if="row.result"
-              :percentage="Math.round(row.result.sport_ratio * 100)" :stroke-width="8"
-              :color="row.result.sport_ratio > 0.5 ? '#67c23a' : row.result.sport_ratio > 0.2 ? '#e6a23c' : '#f56c6c'" />
+              :percentage="Math.round((row.result.sport_score != null ? row.result.sport_score : (row.result.sport_ratio || 0)) * 100)" :stroke-width="8"
+              :color="(row.result.sport_score || row.result.sport_ratio || 0) > 0.5 ? '#67c23a' : (row.result.sport_score || row.result.sport_ratio || 0) > 0.2 ? '#e6a23c' : '#f56c6c'" />
           </template>
         </el-table-column>
         <el-table-column label="操作" width="80">
@@ -148,7 +167,7 @@
         <el-row :gutter="16" style="margin-top:16px">
           <el-col :span="14">
             <el-card>
-              <template #header>体育业务占比区间分布</template>
+              <template #header>SportScore 区间分布</template>
               <BarChart title="" :labels="ratioLabels" :series="ratioSeries"
                 xName="占比区间" yName="企业数量" :height="300" />
             </el-card>
@@ -260,7 +279,7 @@ const ratioSeries = computed(() => {
   const bins = [0, 0, 0, 0, 0]
   if (!batchResults.value.length) return [{ name: '企业数', data: bins }]
   batchResults.value.forEach((r) => {
-    const s = (r.sport_ratio || 0) * 100
+    const s = (r.sport_score != null ? r.sport_score : (r.sport_ratio || 0)) * 100
     if (s < 20) bins[0]++
     else if (s < 40) bins[1]++
     else if (s < 60) bins[2]++

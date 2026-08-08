@@ -1,12 +1,15 @@
 """企业识别路由 v2.0 — 单条/批量企业体育业务识别 + 业务边界 + 比重测算"""
 from fastapi import APIRouter, Query
-from models.schemas import RecognitionRequest, BatchRecognitionRequest
-from services.sport_recognition import (
-    recognize_sport_business, batch_recognize, batch_recognize_full,
-    get_recognition_stats, parse_business_lines, classify_business_line,
-)
+from models.schemas import BatchRecognitionRequest, RecognitionRequest
 from services.output_calc import extract_region
-import pandas as pd
+from services.sport_recognition import (
+    batch_recognize,
+    batch_recognize_full,
+    classify_business_line,
+    get_recognition_stats,
+    parse_business_lines,
+    recognize_sport_business,
+)
 
 router = APIRouter()
 
@@ -29,7 +32,7 @@ async def recognize_single(req: RecognitionRequest):
     """单企业体育业态识别 + 业务边界 + 比重测算"""
     result = recognize_sport_business(
         business_text=req.business_text,
-        industry_code=None,
+        industry_code=req.industry_code,
         enterprise_name=req.enterprise_name,
     )
     result["enterprise_id"] = req.enterprise_id
@@ -46,6 +49,7 @@ async def recognize_batch(req: BatchRecognitionRequest):
             "enterprise_id": e.enterprise_id,
             "enterprise_name": e.enterprise_name,
             "business_text": e.business_text,
+            "industry_code": e.industry_code,
             "_uid": e.uid,
         }
         for e in req.enterprises
@@ -103,7 +107,7 @@ async def enterprise_detail(credit_code: str):
 
         return {"code": 404, "message": "未找到该企业数据", "data": None}
     except Exception as e:
-        return {"code": 500, "message": f"查询企业详情失败: {str(e)}", "data": None}
+        return {"code": 500, "message": f"查询企业详情失败: {e!s}", "data": None}
 
 
 @router.get("/stats", summary="识别统计概览")
@@ -141,7 +145,7 @@ async def recognition_stats(file_id: int = Query(..., description="数据文件I
 
         return {"code": 200, "data": stats}
     except Exception as e:
-        return {"code": 500, "message": f"获取识别统计失败: {str(e)}", "data": None}
+        return {"code": 500, "message": f"获取识别统计失败: {e!s}", "data": None}
 
 
 @router.get("/business-lines", summary="业务线解析演示")
