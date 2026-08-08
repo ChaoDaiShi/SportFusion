@@ -1,0 +1,52 @@
+{
+  "meta": {
+    "version": "INDUSTRY-CODE-2026-08",
+    "name": "SportFusion Industry Code Mapping",
+    "description": "GB/T 4754-2017 国民经济行业分类中与体育产业相关的代码映射",
+    "source_standard": "GB/T 4754-2017",
+    "last_updated": "2026-08-08"
+  },
+  "code_weight_defaults": {
+    "direct": 0.85,
+    "indirect": 0.30,
+    "none": 0.0
+  },
+  "codes": [
+    {"code": 8911, "name": "体育组织", "relation_type": "direct", "sport_category": "体育管理", "evidence_weight": 0.85, "source_standard": "GB/T 4754-2017", "enabled": true},
+    {"code": 8912, "name": "体育社团", "relation_type": "direct", "sport_category": "体育管理", "evidence_weight": 0.85, "source_standard": "GB/T 4754-2017", "enabled": true},
+    {"code": 8919, "name": "其他体育组织", "relation_type": "direct", "sport_category": "体育管理", "evidence_weight": 0.85, "source_standard": "GB/T 4754-2017", "enabled": true},
+    {"code": 8921, "name": "体育场馆管理", "relation_type": "direct", "sport_category": "体育场馆", "evidence_weight": 0.85, "source_standard": "GB/T 4754-2017", "enabled": true},
+    {"code": 8929, "name": "其他体育场地设施管理", "relation_type": "direct", "sport_category": "体育场馆", "evidence_weight": 0.85, "source_standard": "GB/T 4754-2017", "enabled": true},
+    {"code": 8930, "name": "健身休闲活动", "relation_type": "direct", "sport_category": "健身休闲", "evidence_weight": 0.85, "source_standard": "GB/T 4754-2017", "enabled": true},
+    {"code": 8392, "name": "体校及体育培训", "relation_type": "direct", "sport_category": "体育培训", "evidence_weight": 0.85, "source_standard": "GB/T 4754-2017", "enabled": true},
+    {"code": 2441, "name": "球类制造", "relation_type": "direct", "sport_category": "体育用品", "evidence_weight": 0.85, "source_standard": "GB/T 4754-2017", "enabled": true},
+    {"code": 2442, "name": "体育器材及配件制造", "relation_type": "direct", "sport_category": "体育用品", "evidence_weight": 0.85, "source_standard": "GB/T 4754-2017", "enabled": true},
+    {"code": 2443, "name": "训练健身器材制造", "relation_type": "direct", "sport_category": "体育用品", "evidence_weight": 0.85, "source_standard": "GB/T 4754-2017", "enabled": true},
+    {"code": 2444, "name": "运动防护用具制造", "relation_type": "direct", "sport_category": "体育用品", "evidence_weight": 0.85, "source_standard": "GB/T 4754-2017", "enabled": true},
+    {"code": 2449, "name": "其他体育用品制造", "relation_type": "direct", "sport_category": "体育用品", "evidence_weight": 0.85, "source_standard": "GB/T 4754-2017", "enabled": true},
+    {"code": 1821, "name": "运动机织服装制造", "relation_type": "direct", "sport_category": "体育用品", "evidence_weight": 0.85, "source_standard": "GB/T 4754-2017", "enabled": true},
+    {"code": 1831, "name": "运动针织服装制造", "relation_type": "direct", "sport_category": "体育用品", "evidence_weight": 0.85, "source_standard": "GB/T 4754-2017", "enabled": true},
+    {"code": 5142, "name": "体育用品及器材批发", "relation_type": "direct", "sport_category": "体育用品", "evidence_weight": 0.85, "source_standard": "GB/T 4754-2017", "enabled": true},
+    {"code": 5242, "name": "体育用品及器材零售", "relation_type": "direct", "sport_category": "体育用品", "evidence_weight": 0.85, "source_standard": "GB/T 4754-2017", "enabled": true},
+    {"code": 7121, "name": "体育设备出租", "relation_type": "direct", "sport_category": "体育场馆", "evidence_weight": 0.85, "source_standard": "GB/T 4754-2017", "enabled": true},
+    {"code": 4892, "name": "体育场地设施工程施工", "relation_type": "direct", "sport_category": "体育场馆", "evidence_weight": 0.85, "source_standard": "GB/T 4754-2017", "enabled": true},
+    {"code": 8391, "name": "职业技能培训", "relation_type": "indirect", "sport_category": "体育培训", "evidence_weight": 0.30, "source_standard": "GB/T 4754-2017", "enabled": true},
+    {"code": 8399, "name": "其他未列明教育", "relation_type": "indirect", "sport_category": "体育培训", "evidence_weight": 0.30, "source_standard": "GB/T 4754-2017", "enabled": true},
+    {"code": 8331, "name": "普通初中教育", "relation_type": "indirect", "sport_category": "体育培训", "evidence_weight": 0.30, "source_standard": "GB/T 4754-2017", "enabled": true},
+    {"code": 8341, "name": "普通小学教育", "relation_type": "indirect", "sport_category": "体育培训", "evidence_weight": 0.30, "source_standard": "GB/T 4754-2017", "enabled": true},
+    {"code": 1952, "name": "运动皮鞋制造", "relation_type": "indirect", "sport_category": "体育用品", "evidence_weight": 0.30, "source_standard": "GB/T 4754-2017", "enabled": true},
+    {"code": 1954, "name": "运动橡胶鞋制造", "relation_type": "indirect", "sport_category": "体育用品", "evidence_weight": 0.30, "source_standard": "GB/T 4754-2017", "enabled": true},
+    {"code": 1961, "name": "运动塑料鞋制造", "relation_type": "indirect", "sport_category": "体育用品", "evidence_weight": 0.30, "source_standard": "GB/T 4754-2017", "enabled": true},
+    {"code": 5238, "name": "鞋帽零售", "relation_type": "indirect", "sport_category": "体育用品", "evidence_weight": 0.30, "source_standard": "GB/T 4754-2017", "enabled": true},
+    {"code": 8720, "name": "电视", "relation_type": "indirect", "sport_category": "体育传媒", "evidence_weight": 0.30, "source_standard": "GB/T 4754-2017", "enabled": true},
+    {"code": 8622, "name": "期刊出版", "relation_type": "indirect", "sport_category": "体育传媒", "evidence_weight": 0.30, "source_standard": "GB/T 4754-2017", "enabled": true},
+    {"code": 8612, "name": "图书出版", "relation_type": "indirect", "sport_category": "体育传媒", "evidence_weight": 0.30, "source_standard": "GB/T 4754-2017", "enabled": true},
+    {"code": 8810, "name": "录音制作", "relation_type": "indirect", "sport_category": "体育传媒", "evidence_weight": 0.30, "source_standard": "GB/T 4754-2017", "enabled": true},
+    {"code": 7259, "name": "其他广告服务", "relation_type": "indirect", "sport_category": "体育管理", "evidence_weight": 0.30, "source_standard": "GB/T 4754-2017", "enabled": true},
+    {"code": 7251, "name": "互联网广告服务", "relation_type": "indirect", "sport_category": "体育管理", "evidence_weight": 0.30, "source_standard": "GB/T 4754-2017", "enabled": true},
+    {"code": 6513, "name": "应用软件开发", "relation_type": "indirect", "sport_category": "体育科技", "evidence_weight": 0.30, "source_standard": "GB/T 4754-2017", "enabled": true},
+    {"code": 6450, "name": "互联网数据服务", "relation_type": "indirect", "sport_category": "体育科技", "evidence_weight": 0.30, "source_standard": "GB/T 4754-2017", "enabled": true},
+    {"code": 7291, "name": "旅行社及相关服务", "relation_type": "indirect", "sport_category": "体育旅游", "evidence_weight": 0.30, "source_standard": "GB/T 4754-2017", "enabled": true},
+    {"code": 7249, "name": "其他专业咨询与调查", "relation_type": "indirect", "sport_category": "体育管理", "evidence_weight": 0.30, "source_standard": "GB/T 4754-2017", "enabled": true}
+  ]
+}
