@@ -1,3 +1,4 @@
+import asyncio
 import ipaddress
 import socket
 import sys
@@ -32,7 +33,11 @@ def _is_loopback_host(host):
 
     numeric_host = normalized.partition("%")[0]
     try:
-        return ipaddress.ip_address(numeric_host).is_loopback
+        address = ipaddress.ip_address(numeric_host)
+        mapped_ipv4 = getattr(address, "ipv4_mapped", None)
+        if mapped_ipv4 is not None:
+            return mapped_ipv4.is_loopback
+        return address.is_loopback
     except ValueError:
         return False
 
@@ -120,6 +125,59 @@ def _blocked_getnameinfo(address, flags):
     return _NETWORK_ORIGINALS["getnameinfo"](address, flags)
 
 
+@_guard_wrapper
+async def _blocked_asyncio_create_connection(
+    loop,
+    protocol_factory,
+    host=None,
+    port=None,
+    **kwargs,
+):
+    _reject_external_host("asyncio.create_connection", host)
+    return await _NETWORK_ORIGINALS["asyncio_create_connection"](
+        loop,
+        protocol_factory,
+        host=host,
+        port=port,
+        **kwargs,
+    )
+
+
+@_guard_wrapper
+async def _blocked_asyncio_create_datagram_endpoint(
+    loop,
+    protocol_factory,
+    local_addr=None,
+    remote_addr=None,
+    **kwargs,
+):
+    _reject_external("asyncio.create_datagram_endpoint", remote_addr)
+    return await _NETWORK_ORIGINALS["asyncio_create_datagram_endpoint"](
+        loop,
+        protocol_factory,
+        local_addr=local_addr,
+        remote_addr=remote_addr,
+        **kwargs,
+    )
+
+
+@_guard_wrapper
+async def _blocked_proactor_sock_connect(loop, sock, address):
+    _reject_external("ProactorEventLoop.sock_connect", address)
+    return await _NETWORK_ORIGINALS["proactor_sock_connect"](loop, sock, address)
+
+
+@_guard_wrapper
+async def _blocked_proactor_sock_sendto(loop, sock, data, address):
+    _reject_external("ProactorEventLoop.sock_sendto", address)
+    return await _NETWORK_ORIGINALS["proactor_sock_sendto"](
+        loop,
+        sock,
+        data,
+        address,
+    )
+
+
 def _install_network_guard():
     global _NETWORK_MONKEYPATCH
 
@@ -135,9 +193,31 @@ def _install_network_guard():
         "gethostbyname_ex": (socket, "gethostbyname_ex", _blocked_gethostbyname_ex),
         "gethostbyaddr": (socket, "gethostbyaddr", _blocked_gethostbyaddr),
         "getnameinfo": (socket, "getnameinfo", _blocked_getnameinfo),
+        "asyncio_create_connection": (
+            asyncio.BaseEventLoop,
+            "create_connection",
+            _blocked_asyncio_create_connection,
+        ),
+        "asyncio_create_datagram_endpoint": (
+            asyncio.BaseEventLoop,
+            "create_datagram_endpoint",
+            _blocked_asyncio_create_datagram_endpoint,
+        ),
     }
     if hasattr(socket.socket, "sendmsg"):
         targets["sendmsg"] = (socket.socket, "sendmsg", _blocked_sendmsg)
+    proactor_event_loop = getattr(asyncio, "ProactorEventLoop", None)
+    if proactor_event_loop is not None:
+        targets["proactor_sock_connect"] = (
+            proactor_event_loop,
+            "sock_connect",
+            _blocked_proactor_sock_connect,
+        )
+        targets["proactor_sock_sendto"] = (
+            proactor_event_loop,
+            "sock_sendto",
+            _blocked_proactor_sock_sendto,
+        )
 
     monkeypatch = pytest.MonkeyPatch()
     try:
