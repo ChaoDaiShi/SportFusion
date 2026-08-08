@@ -1,0 +1,46 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install uv
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        with:
+          version: "0.11.32"
+          enable-cache: true
+      - name: Sync locked Python environment
+        run: uv sync --locked --dev
+      - name: Verify locked production requirements
+        run: |
+          export_file="$RUNNER_TEMP/sportfusion-requirements.txt"
+          uv export --locked --no-dev --format requirements-txt --no-hashes --no-header --output-file "$export_file"
+          tail -n +3 backend/requirements.txt | cmp -s - "$export_file"
+      - name: Lint Phase 0 Python surfaces
+        run: uv run ruff check conftest.py backend/core backend/tests tests alembic
+      - name: Run backend and contract tests
+        run: uv run pytest tests backend/tests -m "not formal_artifact"
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm test
+      - run: npm run build

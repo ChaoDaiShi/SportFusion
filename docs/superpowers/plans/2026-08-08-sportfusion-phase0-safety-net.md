@@ -36,7 +36,7 @@
 - Consumes: 当前 `backend/requirements.txt` 中的运行依赖和本机 Python 3.11.9。
 - Produces: `uv sync --locked` 可复现环境；`uv run pytest` 可发现顶层测试和 `backend/tests`。
 
-- [ ] **Step 1: 创建项目元数据失败测试**
+- [x] **Step 1: 创建项目元数据失败测试**
 
 创建空的 `tests/__init__.py`、`tests/unit/__init__.py`。创建 `tests/conftest.py`，让旧测试可以沿用当前绝对导入：
 
@@ -86,7 +86,7 @@ def test_pytest_collects_top_level_and_legacy_tests():
     assert testpaths == ["tests", "backend/tests"]
 ```
 
-- [ ] **Step 2: 安装执行测试所需的固定版本 uv**
+- [x] **Step 2: 安装执行测试所需的固定版本 uv**
 
 Run:
 
@@ -97,7 +97,7 @@ uv --version
 
 Expected: 输出 `uv 0.11.32`。如果网络沙箱阻止 PyPI，申请一次仅用于安装 uv 的网络权限，不改用来源不明的二进制。
 
-- [ ] **Step 3: 运行测试，确认因缺少 pyproject 失败**
+- [x] **Step 3: 运行测试，确认因缺少 pyproject 失败**
 
 Run:
 
@@ -107,7 +107,7 @@ uv run --no-project --with pytest==8.3.5 pytest tests/unit/test_project_metadata
 
 Expected: 3 tests failed，首个错误包含 `pyproject.toml` 不存在。
 
-- [ ] **Step 4: 创建 pyproject.toml**
+- [x] **Step 4: 创建 pyproject.toml**
 
 创建 `pyproject.toml`：
 
@@ -160,7 +160,7 @@ target-version = "py311"
 line-length = 100
 ```
 
-- [ ] **Step 5: 生成锁文件**
+- [x] **Step 5: 生成锁文件**
 
 Run:
 
@@ -170,7 +170,7 @@ uv lock --python 3.11
 
 Expected: 根目录生成 `uv.lock`。如果网络沙箱阻止项目依赖下载，申请仅用于 PyPI 依赖同步的网络权限。
 
-- [ ] **Step 6: 从锁定项目导出兼容 requirements**
+- [x] **Step 6: 从锁定项目导出兼容 requirements**
 
 Run:
 
@@ -180,7 +180,7 @@ uv export --locked --no-dev --format requirements-txt --no-hashes --output-file 
 
 Expected: `backend/requirements.txt` 包含运行依赖，不包含 pytest、ruff 或 Alembic。
 
-- [ ] **Step 7: 运行元数据测试和旧后端测试**
+- [x] **Step 7: 运行元数据测试和旧后端测试**
 
 Run:
 
@@ -191,7 +191,7 @@ uv run pytest tests/unit/test_project_metadata.py backend/tests -v
 
 Expected: 7 tests passed，包括新增 3 项和旧后端 4 项。
 
-- [ ] **Step 8: 提交依赖基础设施**
+- [x] **Step 8: 提交依赖基础设施**
 
 ```powershell
 git add pyproject.toml uv.lock backend/requirements.txt tests/__init__.py tests/conftest.py tests/unit/__init__.py tests/unit/test_project_metadata.py
@@ -220,7 +220,7 @@ git commit -m "build: add reproducible uv environment"
 - Consumes: Task 1 提供的 PyYAML 和 pytest。
 - Produces: `load_config(path: Path) -> dict`、`sha256_file(path: Path) -> str`、`require_formal_config(path: Path) -> dict`；后续阶段只通过这三个入口读取正式配置。
 
-- [ ] **Step 1: 写配置加载失败测试**
+- [x] **Step 1: 写配置加载失败测试**
 
 创建 `tests/unit/test_configuration.py`：
 
@@ -317,7 +317,7 @@ def test_require_formal_config_returns_verified_config(tmp_path, monkeypatch):
     assert require_formal_config(path)["version"] == "V1"
 ```
 
-- [ ] **Step 2: 运行测试，确认模块不存在**
+- [x] **Step 2: 运行测试，确认模块不存在**
 
 Run:
 
@@ -327,7 +327,7 @@ uv run pytest tests/unit/test_configuration.py -v
 
 Expected: collection FAIL，错误包含 `No module named 'backend.core'`。
 
-- [ ] **Step 3: 创建配置版本常量与加载器**
+- [x] **Step 3: 创建配置版本常量与加载器**
 
 创建空的 `backend/core/__init__.py`，并创建 `backend/core/versions.py`：
 
@@ -433,7 +433,7 @@ def require_formal_config(path: Path) -> dict[str, Any]:
     return payload
 ```
 
-- [ ] **Step 4: 创建配置 manifest 和七个明确缺失的配置骨架**
+- [x] **Step 4: 创建配置 manifest 和七个明确缺失的配置骨架**
 
 创建 `config/manifest.yaml`：
 
@@ -526,7 +526,7 @@ alphas: []
 evidence_profiles: []
 ```
 
-- [ ] **Step 5: 运行配置测试和静态检查**
+- [x] **Step 5: 运行配置测试和静态检查**
 
 Run:
 
@@ -537,7 +537,7 @@ uv run ruff check backend/core tests/unit/test_configuration.py
 
 Expected: 7 tests passed；ruff 退出码 0。
 
-- [ ] **Step 6: 提交配置边界**
+- [x] **Step 6: 提交配置边界**
 
 ```powershell
 git add backend/core config tests/unit/test_configuration.py
@@ -559,7 +559,7 @@ git commit -m "feat: add versioned configuration boundary"
 - Consumes: 报告锁定数字；Task 1 的 `formal_artifact` marker；Task 2 的 `sha256_file`。
 - Produces: 自洽的 Golden fixture、正式产物缺失清单、未来算法目录的硬编码扫描。
 
-- [ ] **Step 1: 创建正式指标 fixture**
+- [x] **Step 1: 创建正式指标 fixture**
 
 创建 `tests/fixtures/expected_formal_metrics.json`：
 
@@ -626,7 +626,7 @@ git commit -m "feat: add versioned configuration boundary"
 }
 ```
 
-- [ ] **Step 2: 写 Golden 内部一致性测试**
+- [x] **Step 2: 写 Golden 内部一致性测试**
 
 创建空的 `tests/golden/__init__.py`，并创建 `tests/golden/test_golden_contract.py`：
 
@@ -690,7 +690,7 @@ def test_review_priority_covers_candidates_and_p1_p2_rate(expected):
     ] == pytest.approx(0.0503, abs=1e-4)
 ```
 
-- [ ] **Step 3: 运行 Golden 契约测试**
+- [x] **Step 3: 运行 Golden 契约测试**
 
 Run:
 
@@ -700,7 +700,7 @@ uv run pytest tests/golden/test_golden_contract.py -v
 
 Expected: 5 tests passed。若类别规模求和超出 0.02，先核对 fixture 抄录，不修改容差掩盖错误。
 
-- [ ] **Step 4: 写 formal artifact 门禁测试**
+- [x] **Step 4: 写 formal artifact 门禁测试**
 
 创建 `tests/golden/test_formal_artifact.py`：
 
@@ -822,7 +822,7 @@ def test_sha256_manifest_covers_every_formal_file():
         assert entries[relative] == sha256_file(ARTIFACT_ROOT / relative)
 ```
 
-- [ ] **Step 5: 写新算法目录的硬编码策略测试**
+- [x] **Step 5: 写新算法目录的硬编码策略测试**
 
 创建 `tests/unit/test_forbidden_patterns.py`：
 
@@ -853,7 +853,7 @@ def test_new_algorithm_modules_do_not_embed_golden_results():
     assert violations == []
 ```
 
-- [ ] **Step 6: 验证缺产物时明确跳过且策略测试通过**
+- [x] **Step 6: 验证缺产物时明确跳过且策略测试通过**
 
 Run:
 
@@ -863,7 +863,7 @@ uv run pytest tests/golden tests/unit/test_forbidden_patterns.py -v
 
 Expected: 6 passed, 2 skipped；skip 原因逐项列出缺失 formal artifact。
 
-- [ ] **Step 7: 提交 Golden 安全网**
+- [x] **Step 7: 提交 Golden 安全网**
 
 ```powershell
 git add tests/fixtures tests/golden tests/unit/test_forbidden_patterns.py
@@ -885,7 +885,7 @@ git commit -m "test: lock formal report contracts"
 - Consumes: 当前 `backend/main.py` 路由；当前 SQLAlchemy `Base.metadata`。
 - Produces: session 级 `app` fixture、`client` fixture、外部网络阻断；路由和数据库结构基线。
 
-- [ ] **Step 1: 扩展 pytest 入口并加入网络阻断 fixture**
+- [x] **Step 1: 扩展 pytest 入口并加入网络阻断 fixture**
 
 将 `tests/conftest.py` 替换为以下完整内容：
 
@@ -926,7 +926,7 @@ def block_external_network(monkeypatch):
 
 创建空的 `tests/api/__init__.py` 和 `tests/integration/__init__.py`。
 
-- [ ] **Step 2: 写 API smoke tests**
+- [x] **Step 2: 写 API smoke tests**
 
 创建 `tests/api/test_api_smoke.py`：
 
@@ -986,7 +986,7 @@ def test_validate_summary_does_not_crash_when_preprocessed_data_exists(client):
     assert response.status_code != 500
 ```
 
-- [ ] **Step 3: 写空数据库 metadata 测试**
+- [x] **Step 3: 写空数据库 metadata 测试**
 
 创建 `tests/integration/test_database_metadata.py`：
 
@@ -1020,7 +1020,7 @@ def test_current_orm_metadata_creates_expected_tables(tmp_path):
     assert EXPECTED_TABLES <= set(inspect(engine).get_table_names())
 ```
 
-- [ ] **Step 4: 运行 smoke tests，确认已知故障是严格 xfail**
+- [x] **Step 4: 运行 smoke tests，确认已知故障是严格 xfail**
 
 Run:
 
@@ -1030,7 +1030,7 @@ uv run pytest tests/api tests/integration backend/tests -v
 
 Expected: 7 passed, 1 xfailed。若 P0-07 意外转为 XPASS，先确认业务代码是否被其他变更修改；Phase 0 不在此任务修复算法验证链。
 
-- [ ] **Step 5: 提交现状回归测试**
+- [x] **Step 5: 提交现状回归测试**
 
 ```powershell
 git add tests/conftest.py tests/api tests/integration
@@ -1053,7 +1053,7 @@ git commit -m "test: capture legacy api and schema baseline"
 - Consumes: 当前 `models.database.Base.metadata` 和 `backend/sports_industry.db` 的只读副本。
 - Produces: revision `1d865fc0001`；空库 `upgrade head`；现有数据库副本 `stamp head`；后续迁移以该 revision 为父节点。
 
-- [ ] **Step 1: 写 Alembic 安全测试**
+- [x] **Step 1: 写 Alembic 安全测试**
 
 创建 `tests/integration/test_alembic_baseline.py`：
 
@@ -1115,7 +1115,7 @@ def test_existing_database_copy_can_be_stamped_without_changing_business_rows(tm
     assert revision == "1d865fc0001"
 ```
 
-- [ ] **Step 2: 运行测试，确认缺少 Alembic 配置**
+- [x] **Step 2: 运行测试，确认缺少 Alembic 配置**
 
 Run:
 
@@ -1125,7 +1125,7 @@ uv run pytest tests/integration/test_alembic_baseline.py -v
 
 Expected: FAIL，错误表明 `alembic.ini` 或 revision 不存在。
 
-- [ ] **Step 3: 初始化 Alembic 配置**
+- [x] **Step 3: 初始化 Alembic 配置**
 
 Run:
 
@@ -1199,7 +1199,7 @@ else:
     run_migrations_online()
 ```
 
-- [ ] **Step 4: 用空数据库自动生成可追溯 baseline revision**
+- [x] **Step 4: 用空数据库自动生成可追溯 baseline revision**
 
 Run:
 
@@ -1210,7 +1210,7 @@ uv run alembic -x database_url="sqlite:///$($env:SPORTFUSION_MIGRATION_DB -repla
 
 Expected: 生成 `alembic/versions/1d865fc0001_current_schema_baseline.py`，upgrade 创建 14 张业务表，不含 Phase 1 未来字段。
 
-- [ ] **Step 5: 创建迁移基线说明**
+- [x] **Step 5: 创建迁移基线说明**
 
 创建 `MIGRATION_BASELINE.md`，内容必须包含以下确定信息：
 
@@ -1255,7 +1255,7 @@ Register an existing database: copy it first, verify table counts, then run `uv 
 Never run destructive migration experiments against `backend/sports_industry.db`.
 ```
 
-- [ ] **Step 6: 运行 Alembic 和 metadata 测试**
+- [x] **Step 6: 运行 Alembic 和 metadata 测试**
 
 Run:
 
@@ -1266,7 +1266,7 @@ uv run alembic history
 
 Expected: 3 tests passed；history 显示 `1d865fc0001 (head)`。
 
-- [ ] **Step 7: 提交数据库基线**
+- [x] **Step 7: 提交数据库基线**
 
 ```powershell
 git add alembic.ini alembic MIGRATION_BASELINE.md tests/integration/test_alembic_baseline.py
@@ -1285,7 +1285,7 @@ git commit -m "chore: establish alembic schema baseline"
 - Consumes: Tasks 1–5 的 uv lock、pytest、配置、Golden 测试和 Alembic revision；前端现有 package lock 与测试。
 - Produces: 无密钥、无正式数据、无外部大模型依赖的 CI；Phase 0 完成证据。
 
-- [ ] **Step 1: 创建 GitHub Actions workflow**
+- [x] **Step 1: 创建 GitHub Actions workflow**
 
 创建 `.github/workflows/ci.yml`：
 
@@ -1335,7 +1335,7 @@ jobs:
 
 Action 版本依据 Astral 官方 uv GitHub 集成文档和 GitHub 官方 setup-node/checkout README；不要改回旧的 v4 action。
 
-- [ ] **Step 2: 运行 Python 全量验收**
+- [x] **Step 2: 运行 Python 全量验收**
 
 Run:
 
@@ -1353,7 +1353,7 @@ Expected:
 - formal artifact 测试恰好 2 项 skipped，输出完整缺失文件清单；
 - 没有外部网络访问。
 
-- [ ] **Step 3: 运行前端回归与构建**
+- [x] **Step 3: 运行前端回归与构建**
 
 Run:
 
@@ -1364,7 +1364,7 @@ npm.cmd --prefix frontend run build
 
 Expected: 现有前端 17 项测试通过；Vite production build 退出码 0。依赖包体积 warning 可以记录，但不能有编译错误。
 
-- [ ] **Step 4: 验证兼容 requirements 和 Alembic**
+- [x] **Step 4: 验证兼容 requirements 和 Alembic**
 
 Run:
 
@@ -1376,7 +1376,7 @@ uv run alembic history
 
 Expected: `Compare-Object` 无输出；Alembic history 显示 `1d865fc0001 (head)`。
 
-- [ ] **Step 5: 验证 Phase 0 没有修改业务算法或 Vue 页面**
+- [x] **Step 5: 验证 Phase 0 没有修改业务算法或 Vue 页面**
 
 Run:
 
@@ -1388,14 +1388,14 @@ Write-Output 'phase0-scope-check: clean'
 
 Expected: `phase0-scope-check: clean`。
 
-- [ ] **Step 6: 提交 CI 与已完成计划状态**
+- [x] **Step 6: 提交 CI 与已完成计划状态**
 
 ```powershell
 git add .github/workflows/ci.yml docs/superpowers/plans/2026-08-08-sportfusion-phase0-safety-net.md
 git commit -m "ci: verify phase 0 safety net"
 ```
 
-- [ ] **Step 7: 输出 Phase 0 交付摘要**
+- [x] **Step 7: 输出 Phase 0 交付摘要**
 
 交付消息必须包含：
 
