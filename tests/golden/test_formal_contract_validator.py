@@ -1625,6 +1625,19 @@ def test_measured_benchmark_dependency_lock_must_match_batch_metadata(tmp_path):
         validate_formal_artifact(artifact_root, expected)
 
 
+def test_measured_benchmark_dependency_lock_match_is_case_insensitive(tmp_path):
+    from tests.golden.formal_contract import validate_formal_artifact
+
+    expected = json.loads(EXPECTED_PATH.read_text(encoding="utf-8"))
+    artifact_root = _build_valid_artifact(tmp_path / expected["batch_number"], expected)
+    payload = _set_complete_measured_benchmark(artifact_root)
+    payload["runtime_environment"]["dependency_lock_sha256"] = "E" * 64
+    _write_json(artifact_root, "audit/benchmark.json", payload)
+    _refresh_sha256sums(artifact_root)
+
+    validate_formal_artifact(artifact_root, expected)
+
+
 @pytest.mark.parametrize(
     "mutation",
     [
@@ -1753,6 +1766,29 @@ def test_audit_records_are_canonical_and_fail_closed(tmp_path, mutation):
         validate_formal_artifact(artifact_root, expected)
 
 
+@pytest.mark.parametrize(
+    ("field", "invalid_value"),
+    [
+        ("expected", 8950.0),
+        ("actual", 8950.0),
+        ("expected", True),
+        ("actual", True),
+    ],
+)
+def test_aud_01_rejects_non_integer_candidate_counts(tmp_path, field, invalid_value):
+    from tests.golden.formal_contract import validate_formal_artifact
+
+    expected = json.loads(EXPECTED_PATH.read_text(encoding="utf-8"))
+    artifact_root = _build_valid_artifact(tmp_path / expected["batch_number"], expected)
+    audit = _read_json(artifact_root, "audit/audit_checks.json")
+    audit["checks"][0][field] = invalid_value
+    _write_json(artifact_root, "audit/audit_checks.json", audit)
+    _refresh_sha256sums(artifact_root)
+
+    with pytest.raises(AssertionError, match="AUD-01"):
+        validate_formal_artifact(artifact_root, expected)
+
+
 def test_non_candidate_audit_check_can_pass_with_non_equal_scalar_values(tmp_path):
     from tests.golden.formal_contract import validate_formal_artifact
 
@@ -1832,6 +1868,45 @@ def test_metric_json_accepts_controlled_schema_and_provenance_extensions(tmp_pat
     _refresh_sha256sums(artifact_root)
 
     validate_formal_artifact(artifact_root, expected)
+
+
+def test_metric_json_accepts_nested_formal_provenance_keys_and_values(tmp_path):
+    from tests.golden.formal_contract import validate_formal_artifact
+
+    expected = json.loads(EXPECTED_PATH.read_text(encoding="utf-8"))
+    artifact_root = _build_valid_artifact(tmp_path / expected["batch_number"], expected)
+    payload = _read_json(artifact_root, "validation/binary_metrics.json")
+    payload["provenance"] = {"source": {"official": ["reviewed", "locked"]}}
+    _write_json(artifact_root, "validation/binary_metrics.json", payload)
+    _refresh_sha256sums(artifact_root)
+
+    validate_formal_artifact(artifact_root, expected)
+
+
+def test_metric_json_rejects_forbidden_nested_provenance_key(tmp_path):
+    from tests.golden.formal_contract import validate_formal_artifact
+
+    expected = json.loads(EXPECTED_PATH.read_text(encoding="utf-8"))
+    artifact_root = _build_valid_artifact(tmp_path / expected["batch_number"], expected)
+    payload = _read_json(artifact_root, "validation/binary_metrics.json")
+    payload["provenance"] = {"source": {"synthetic": {"label": "official"}}}
+    _write_json(artifact_root, "validation/binary_metrics.json", payload)
+    _refresh_sha256sums(artifact_root)
+
+    with pytest.raises(AssertionError, match="provenance"):
+        validate_formal_artifact(artifact_root, expected)
+
+
+def test_metric_provenance_scans_tuple_values():
+    from tests.golden.formal_contract import _metric_keys
+
+    payload = {
+        "value": 1,
+        "provenance": {"source": ("official", "synthetic")},
+    }
+
+    with pytest.raises(AssertionError, match="provenance"):
+        _metric_keys(payload, {"value"}, "tuple provenance")
 
 
 @pytest.mark.parametrize(

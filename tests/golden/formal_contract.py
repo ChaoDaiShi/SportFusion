@@ -184,15 +184,16 @@ def _exact_keys(payload: dict, keys: set[str], area: str) -> None:
     )
 
 
-def _string_values(value: object):
+def _string_keys_and_values(value: object):
     if isinstance(value, str):
         yield value
     elif isinstance(value, dict):
-        for nested in value.values():
-            yield from _string_values(nested)
-    elif isinstance(value, list):
+        for key, nested in value.items():
+            yield from _string_keys_and_values(key)
+            yield from _string_keys_and_values(nested)
+    elif isinstance(value, (list, tuple)):
         for nested in value:
-            yield from _string_values(nested)
+            yield from _string_keys_and_values(nested)
 
 
 def _metric_keys(payload: dict, required: set[str], area: str) -> None:
@@ -216,7 +217,10 @@ def _metric_keys(payload: dict, required: set[str], area: str) -> None:
             f"contract {area}: provenance must be a non-empty object with non-empty keys",
         )
         _require(
-            not any(_has_forbidden_marker(value) for value in _string_values(provenance)),
+            not any(
+                _has_forbidden_marker(value)
+                for value in _string_keys_and_values(provenance)
+            ),
             f"contract {area}: provenance cannot contain a forbidden formal-data marker",
         )
 
@@ -1195,7 +1199,8 @@ def _validate_benchmark(root: Path, validation: dict, metadata: dict) -> None:
         f"contract {area}: measured dependency_lock_sha256 must be 64 hexadecimal characters",
     )
     _require(
-        dependency_lock == metadata["runtime_env_json"]["dependency_lock_sha256"],
+        dependency_lock.lower()
+        == metadata["runtime_env_json"]["dependency_lock_sha256"].lower(),
         f"contract {area}: measured dependency_lock_sha256 must match batch metadata",
     )
     _require(
@@ -1275,6 +1280,7 @@ def _validate_audit(root: Path, expected: dict) -> None:
     )
     _require(
         type(first["expected"]) is int
+        and type(first["actual"]) is int
         and first["expected"] == first["actual"] == 8950,
         "audit contract: AUD-01 expected and actual must both be 8950",
     )
