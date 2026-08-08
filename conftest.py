@@ -25,8 +25,9 @@ def _is_loopback_destination(address):
         return False
 
 
-@pytest.fixture(autouse=True)
-def block_external_network(monkeypatch):
+@pytest.fixture(scope="session", autouse=True)
+def block_external_network():
+    monkeypatch = pytest.MonkeyPatch()
     original_connect = socket.socket.connect
     original_connect_ex = socket.socket.connect_ex
 
@@ -42,3 +43,5 @@ def block_external_network(monkeypatch):
 
     monkeypatch.setattr(socket.socket, "connect", blocked_connect)
     monkeypatch.setattr(socket.socket, "connect_ex", blocked_connect_ex)
+    yield
+    monkeypatch.undo()
