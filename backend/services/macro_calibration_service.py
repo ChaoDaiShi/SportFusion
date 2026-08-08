@@ -1,21 +1,22 @@
 """
-宏观校准服务 — 使用官方区域体育产业总量约束进行结构分配。
+宏观校准与结构分配服务 — Phase 3 closure: proper 5-layer model.
 
-核心原则：
-    2170.80亿元是宏观校准约束，只能进入规模分配阶段。
-    不进入 SportScore 或 SportShare 训练。
+Layer 1: A_i = SportShare_i * G_i          (enterprise structural weight)
+Layer 2: p_sample_k = Σ(A_i for cat k) / Σ(A_i)  (sample category structure)
+Layer 3: p_hat_k = (1-α)*p_sample_k + α*p_official_k  (fused structure)
+Layer 4: Y_hat_k = Y_total * p_hat_k        (category output)
+Layer 5: Y_hat_rk = Y_hat_k * Q_rk / Σ_r(Q_rk)  (regional allocation)
 
-方法：
-    enterprise_weight_i = f(SportShare, structural_evidence)
-    normalized_weight_i = weight_i / Σ weight_i
-    allocated_output_i = official_total × normalized_weight_i
+alpha enters ONLY at Layer 3 (sample vs official prior blending).
+alpha does NOT enter enterprise-level addition.
+
+Official total (e.g. 2170.80亿元) enters ONLY at Layer 4.
 """
 
 import json
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
-from typing import Any
 
 _CONFIG_DIR = Path(__file__).resolve().parent.parent / "config"
 
@@ -38,7 +39,7 @@ def load_official_total() -> MacroCalibration:
     path = _CONFIG_DIR / "official_totals.json"
     with open(path, encoding="utf-8") as f:
         data = json.load(f)
-    entry = data["entries"][0]  # Use first enabled entry
+    entry = data["entries"][0]
     return MacroCalibration(
         year=entry["year"],
         region=entry["region"],
@@ -50,164 +51,165 @@ def load_official_total() -> MacroCalibration:
     )
 
 
-def compute_enterprise_weight(
+def load_official_category_prior() -> dict[str, float] | None:
+    """
+    加载官方九类业态结构先验 p_official_k。
+
+    Returns None if formal artifact is missing.
+    Formal callers must handle None → artifact_required.
+    """
+    path = _CONFIG_DIR / "official_category_prior.json"
+    if not path.exists():
+        return None
+    with open(path, encoding="utf-8") as f:
+        data = json.load(f)
+    return {k: float(v) for k, v in data.get("prior", {}).items()}
+
+
+# ---- Layer 1: Enterprise structural weight ----
+
+def compute_structural_weight(
     effective_share: float,
-    sport_score: float,
-    code_type: str = "none",
-    alpha: float = 0.20,
+    structural_factor: float = 1.0,
 ) -> float:
     """
-    计算企业在总量分配中的结构权重。
+    Layer 1: A_i = SportShare_i * G_i
 
-    weight = effective_share + alpha × sport_score
-
-    alpha 控制 SportScore 结构先验的影响程度。
-    alpha = 0.20 为正式基准。
-
-    Args:
-        effective_share: SportShare effective_share
-        sport_score: SportScore (体育业务证据评分)
-        code_type: 行业代码类型
-        alpha: 结构先验参数 [0, 1]
-
-    Returns:
-        企业权重（非归一化）
+    G_i = structural distribution factor.
+    Default = 1.0 when no formal G_i artifact is available.
+    This is a documented baseline, NOT a hardcoded report value.
     """
-    return effective_share + alpha * sport_score
+    return effective_share * structural_factor
 
 
-def normalize_weights(weights: list[float]) -> list[float]:
+# ---- Layer 2 & 3: Category structure fusion ----
+
+def compute_sample_category_structure(
+    category_weights: dict[str, float],
+) -> dict[str, float]:
     """
-    归一化权重使 Σ w_i = 1。
-
-    如果所有权重为0，返回均匀权重。
+    Layer 2: p_sample_k = weight for category k / total weight.
     """
-    total = sum(weights)
+    total = sum(category_weights.values())
     if total == 0:
-        n = len(weights)
-        return [1.0 / n] * n if n > 0 else []
-    return [w / total for w in weights]
+        return {}
+    return {k: v / total for k, v in category_weights.items()}
 
 
-def allocate_output(
-    official_total: float,
-    weights: list[float],
-) -> list[float]:
+def fuse_category_structure(
+    p_sample: dict[str, float],
+    p_official: dict[str, float] | None,
+    alpha: float = 0.20,
+) -> dict[str, float]:
     """
-    根据归一化权重分配官方总量。
+    Layer 3: p_hat_k = (1 - α) * p_sample_k + α * p_official_k
 
-    Args:
-        official_total: 官方总量（亿元）
-        weights: 归一化权重（Σ = 1）
+    If p_official is None and alpha > 0:
+        Returns empty dict → caller must handle artifact_required.
+    """
+    if alpha > 0 and p_official is None:
+        return {}  # Signal: artifact_required
+
+    if alpha == 0 or p_official is None:
+        return dict(p_sample)
+
+    all_cats = set(p_sample.keys()) | set(p_official.keys())
+    result = {}
+    for cat in all_cats:
+        ps = p_sample.get(cat, 0.0)
+        po = p_official.get(cat, 0.0)
+        result[cat] = (1.0 - alpha) * ps + alpha * po
+    return result
+
+
+# ---- Layer 4: Category output allocation ----
+
+def allocate_category_output(
+    p_hat: dict[str, float],
+    official_total: float,
+) -> dict[str, float]:
+    """
+    Layer 4: Y_hat_k = Y_total * p_hat_k
+    """
+    return {k: round(official_total * v, 2) for k, v in p_hat.items()}
+
+
+# ---- Layer 5: Regional allocation ----
+
+def allocate_regional_output(
+    category_output: dict[str, float],
+    category_regional_weights: dict[str, dict[str, float]],
+    unresolved_share: float = 0.0,
+) -> tuple[dict[str, dict[str, float]], dict[str, float]]:
+    """
+    Layer 5: Y_hat_rk = Y_hat_k * Q_rk / Σ_r(Q_rk)
 
     Returns:
-        每家企业的分配产出（亿元）
+        (regional_outputs, unresolved_by_category)
+        regional_outputs[category][region] = allocated output
+        unresolved_by_category[category] = unresolved portion
     """
-    return [official_total * w for w in weights]
+    regional: dict[str, dict[str, float]] = {}
+    unresolved: dict[str, float] = {}
 
+    for cat, cat_total in category_output.items():
+        weights = category_regional_weights.get(cat, {})
+        total_w = sum(weights.values())
+        if total_w == 0:
+            unresolved[cat] = cat_total
+            continue
+
+        regional[cat] = {}
+        for region, w in weights.items():
+            regional[cat][region] = round(cat_total * w / total_w, 2)
+
+        if unresolved_share > 0:
+            unresolved[cat] = round(cat_total * unresolved_share, 2)
+
+    return regional, unresolved
+
+
+# ---- Boundary split ----
 
 @dataclass
 class ScaleAllocationResult:
     """规模分配结果"""
-
     enterprise_id: str = ""
     credit_code: str = ""
     enterprise_name: str = ""
     sport_category: str = ""
     region: str = ""
-    region_code: str = ""
 
     effective_share: float = 0.0
-    sport_score: float = 0.0
-    weight: float = 0.0
-    normalized_weight: float = 0.0
-    allocated_output: float = 0.0  # 亿元
-
-    share_source: str = "none"
+    structural_weight: float = 0.0
+    category: str = ""
     code_type: str = "none"
     is_traditional_boundary: bool = False
 
 
-def run_scale_allocation(
-    enterprises: list[dict[str, Any]],
-    sportshare_estimates: list[Any],
-    recognition_results: list[dict[str, Any]] | None = None,
-    alpha: float = 0.20,
-) -> list[ScaleAllocationResult]:
-    """
-    执行完整的规模分配 pipeline。
-
-    1. 计算每家企业权重
-    2. 归一化
-    3. 用官方总量分配
-    4. 标记传统边界内外
-    """
-    calibration = load_official_total()
-    official_total = calibration.official_total_output
-
-    # 计算权重
-    raw_weights = []
-    for i, ent in enumerate(enterprises):
-        est = sportshare_estimates[i] if i < len(sportshare_estimates) else None
-        rec = recognition_results[i] if recognition_results and i < len(recognition_results) else None
-
-        es = est.effective_share if est else 0.0
-        ss = rec.get("sport_score", 0.0) if rec else 0.0
-        ct = rec.get("code_type", "none") if rec else "none"
-
-        w = compute_enterprise_weight(es, ss, ct, alpha)
-        raw_weights.append(w)
-
-    # 归一化
-    norm_weights = normalize_weights(raw_weights)
-
-    # 分配
-    outputs = allocate_output(official_total, norm_weights)
-
-    # 构建结果
-    results = []
-    for i, ent in enumerate(enterprises):
-        est = sportshare_estimates[i] if i < len(sportshare_estimates) else None
-        rec = recognition_results[i] if recognition_results and i < len(recognition_results) else None
-
-        result = ScaleAllocationResult(
-            enterprise_id=str(ent.get("enterprise_id", ent.get("credit_code", i))),
-            credit_code=ent.get("credit_code", ""),
-            enterprise_name=ent.get("enterprise_name", ent.get("name", "")),
-            sport_category=rec.get("sport_category", "") if rec else "",
-            region=ent.get("region", ""),
-            region_code=ent.get("region_code", ""),
-            effective_share=est.effective_share if est else 0.0,
-            sport_score=rec.get("sport_score", 0.0) if rec else 0.0,
-            weight=raw_weights[i],
-            normalized_weight=norm_weights[i],
-            allocated_output=outputs[i],
-            share_source=est.share_source if est else "none",
-            code_type=rec.get("code_type", "none") if rec else "none",
-            is_traditional_boundary=(rec.get("code_type") == "direct" if rec else False),
-        )
-        results.append(result)
-
-    return results
-
-
 def compute_boundary_split(
     allocations: list[ScaleAllocationResult],
+    category_outputs: dict[str, float],
 ) -> dict[str, float]:
     """
-    计算传统代码边界内外规模。
+    Compute inside/outside traditional boundary from final allocation.
 
-    Returns:
-        {
-            "inside_traditional_boundary_output": float,
-            "outside_traditional_boundary_output": float,
-            "official_total": float,
-        }
+    Uses category-level outputs with per-enterprise boundary tags
+    to proportionally split each category.
     """
-    inside = sum(a.allocated_output for a in allocations if a.is_traditional_boundary)
-    outside = sum(a.allocated_output for a in allocations if not a.is_traditional_boundary)
-    total = sum(a.allocated_output for a in allocations)
+    inside = 0.0
+    outside = 0.0
 
+    for cat, cat_total in category_outputs.items():
+        cat_allocs = [a for a in allocations if a.category == cat]
+        inside_w = sum(a.structural_weight for a in cat_allocs if a.is_traditional_boundary)
+        outside_w = sum(a.structural_weight for a in cat_allocs if not a.is_traditional_boundary)
+        total_w = inside_w + outside_w
+        if total_w > 0:
+            inside += cat_total * inside_w / total_w
+            outside += cat_total * outside_w / total_w
+
+    total = inside + outside
     return {
         "inside_traditional_boundary_output": round(inside, 2),
         "outside_traditional_boundary_output": round(outside, 2),
@@ -215,3 +217,12 @@ def compute_boundary_split(
         "inside_pct": round(inside / total * 100, 2) if total > 0 else 0.0,
         "outside_pct": round(outside / total * 100, 2) if total > 0 else 0.0,
     }
+
+
+def normalize_weights(weights: list[float]) -> list[float]:
+    """Normalize weights to sum to 1."""
+    total = sum(weights)
+    if total == 0:
+        n = len(weights)
+        return [1.0 / n] * n if n > 0 else []
+    return [w / total for w in weights]
