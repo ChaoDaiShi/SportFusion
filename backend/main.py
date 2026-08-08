@@ -33,7 +33,7 @@ app.add_middleware(
 
 # 注册路由模块
 from routers import assistant, data_preprocess, enterprise_recognition, output_calc, chart_data, model_validate, chat, monitoring
-from api import share, scale, review, system
+from api import share, scale, review, system, validate
 
 app.include_router(data_preprocess.router, prefix="/api/data", tags=["数据预处理"])
 app.include_router(enterprise_recognition.router, prefix="/api/recognition", tags=["企业识别"])
@@ -47,6 +47,7 @@ app.include_router(share.router, prefix="/api/share", tags=["比重测算"])
 app.include_router(scale.router, prefix="/api/scale", tags=["规模测算"])
 app.include_router(review.router, prefix="/api/review", tags=["人工复核"])
 app.include_router(system.router, prefix="/api/system", tags=["系统管理"])
+app.include_router(validate.router, prefix="/api/validation", tags=["模型验证"])
 
 
 @app.get("/")
