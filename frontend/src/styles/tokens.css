@@ -1,0 +1,19 @@
+:root {
+  --sf-bg: #f4efe4;
+  --sf-surface: #fffdf8;
+  --sf-surface-muted: #eee6d7;
+  --sf-ink: #1e2b31;
+  --sf-text: #505957;
+  --sf-muted: #727a78;
+  --sf-line: #ddd6c9;
+  --sf-blue: #3157d6;
+  --sf-red: #e75b43;
+  --sf-yellow: #efb63a;
+  --sf-teal: #00a58c;
+  --sf-violet: #7657d5;
+  --sf-radius-sm: 6px;
+  --sf-radius-md: 10px;
+  --sf-radius-lg: 16px;
+  --sf-shadow: 0 14px 32px rgba(58, 46, 30, 0.10);
+  --sf-font: "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+}

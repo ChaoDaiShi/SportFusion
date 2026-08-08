@@ -1,0 +1,45 @@
+{
+  "pipeline_version": "1.0.0",
+  "processed_at": "2026-06-29T16:09:03.939753",
+  "input_file": "..\\data\\processed\\enterprise_dataset_20260629_160902.csv",
+  "total_enterprises": 76687,
+  "sport_enterprise_count": 9023,
+  "sport_ratio_pct": 11.77,
+  "code_direct_count": 8016,
+  "code_indirect_count": 19251,
+  "text_sport_count": 6293,
+  "crossover_count": 951,
+  "category_distribution": {
+    "体育用品": 2321,
+    "电子竞技": 44,
+    "体育培训": 895,
+    "体育场馆": 612,
+    "体育管理": 755,
+    "健身休闲": 3134,
+    "体育赛事": 1245,
+    "体育传媒": 16,
+    "体育彩票": 1
+  },
+  "confidence_distribution": {
+    "high": 5286,
+    "medium": 3737,
+    "low": 0
+  },
+  "sport_categories_used": [
+    "体育赛事",
+    "健身休闲",
+    "体育用品",
+    "体育培训",
+    "体育场馆",
+    "体育传媒",
+    "体育管理",
+    "电子竞技",
+    "体育彩票"
+  ],
+  "column_mapping": {
+    "credit_code": "统一社会信用代码",
+    "name": "详细名称",
+    "code": "行业代码",
+    "business": "主要业务活动"
+  }
+}

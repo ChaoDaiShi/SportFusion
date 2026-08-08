@@ -1,0 +1,101 @@
+{
+  "title": "多元经营背景下体育产业发展政策建议",
+  "generated_at": "2026-06-29T16:09:33.466732",
+  "data_basis": {
+    "total_enterprises": 76687,
+    "sport_enterprises": 8950,
+    "crossover_enterprises": 977,
+    "spatial_concentration_cr3": 74.2
+  },
+  "recommendations": [
+    {
+      "id": "R1",
+      "category": "统计监测",
+      "title": "建立文本+代码双通道识别机制",
+      "priority": "high",
+      "urgency": "立即实施",
+      "target": "统计部门、体育管理部门",
+      "content": "在现有行业代码统计基础上增加NLP文本分析通道。建议省统计局与省体育局联合制定《体育产业NLP识别技术规范》，明确文本预处理标准、体育关键词库维护流程、置信度阈值等关键技术参数。",
+      "expected_impact": "统计覆盖率提升10%以上，新兴业态覆盖率从<5%提升至>90%",
+      "implementation_period": "3-6个月"
+    },
+    {
+      "id": "R2",
+      "category": "统计监测",
+      "title": "建设多元经营企业动态监测名录库",
+      "priority": "high",
+      "urgency": "6个月内启动",
+      "target": "市场监管局、体育局",
+      "content": "基于本次识别出的977家跨界经营企业，建立专项监测名录。对名录内企业每季度更新业务文本数据，动态追踪体育业务变化趋势。",
+      "expected_impact": "实现对跨界企业的精准监测和政策触达",
+      "implementation_period": "6-12个月"
+    },
+    {
+      "id": "R3",
+      "category": "产业发展",
+      "title": "实施体育产业空间均衡发展战略",
+      "priority": "medium",
+      "urgency": "12个月内启动",
+      "target": "省发改委、省体育局",
+      "content": "针对成都单城产出占比过高（CR3=74.2%）的问题，设立区域体育产业发展专项基金。重点扶持绵阳(145家)、宜宾(120家)、泸州(126家)等第二梯队城市，建设3-5个特色体育产业节点城市。",
+      "expected_impact": "CR3降低至55%以下，形成多点支撑的产业格局",
+      "implementation_period": "12-36个月"
+    },
+    {
+      "id": "R4",
+      "category": "新兴业态",
+      "title": "电子竞技与体育传媒专项扶持计划",
+      "priority": "high",
+      "urgency": "立即研究",
+      "target": "省体育局、省文旅厅",
+      "content": "电子竞技跨界率91%、体育传媒跨界率94%，说明这些业态几乎完全未被现有统计体系覆盖。建议：1) 设立电竞/传媒专项统计分类 2) 建设省级电竞产业园区 3) 支持体育MCN机构发展 4) 推动高校开设电竞相关专业",
+      "expected_impact": "新兴业态年增长率30%+，新增就业岗位",
+      "implementation_period": "6-24个月"
+    },
+    {
+      "id": "R5",
+      "category": "基础设施",
+      "title": "建设省级体育产业大数据平台",
+      "priority": "medium",
+      "urgency": "18个月内",
+      "target": "省大数据局、省体育局",
+      "content": "整合工商、税务、社保、赛事备案等多源数据，建立覆盖全省的体育产业大数据平台。平台集成NLP识别引擎，支持年度全样本扫描和月度重点企业监测。",
+      "expected_impact": "形成常态化、自动化的产业统计监测能力",
+      "implementation_period": "12-18个月"
+    }
+  ],
+  "implementation_roadmap": {
+    "phase1_immediate": {
+      "period": "0-6个月",
+      "actions": [
+        "发布《体育产业NLP识别技术指南》",
+        "建立电竞/传媒临时统计分类",
+        "形成977家跨界企业初始名录"
+      ]
+    },
+    "phase2_short_term": {
+      "period": "6-12个月",
+      "actions": [
+        "建设动态监测名录库上线运行",
+        "完成第二梯队城市产业调研",
+        "启动大数据平台需求分析"
+      ]
+    },
+    "phase3_medium_term": {
+      "period": "12-24个月",
+      "actions": [
+        "大数据平台一期上线",
+        "空间均衡政策效果评估",
+        "NLP模型年度校准"
+      ]
+    },
+    "phase4_long_term": {
+      "period": "24-36个月",
+      "actions": [
+        "推动GB/T 4754体育代码修订",
+        "全省推广至其他新兴产业领域",
+        "形成可复制的地方标准"
+      ]
+    }
+  }
+}

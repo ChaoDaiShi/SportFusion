@@ -1,0 +1,86 @@
+[
+  {
+    "id": "R1",
+    "title": "国民经济行业分类",
+    "publisher": "国家市场监督管理总局、国家标准化管理委员会",
+    "year": 2017,
+    "identifier": "GB/T 4754-2017",
+    "url": "https://std.samr.gov.cn/gb/search/gbDetailed?id=71F772D811F1D3A7E05397BE0A0AB82A",
+    "verified": true,
+    "supports": "行业代码口径与现行状态"
+  },
+  {
+    "id": "R2",
+    "title": "体育产业统计分类（2019）",
+    "publisher": "国家统计局",
+    "year": 2019,
+    "identifier": "国家统计局令第26号",
+    "url": "https://www.stats.gov.cn/xw/tjxw/tzgg/202302/t20230202_1894019.html",
+    "verified": true,
+    "supports": "体育产业统计范围及分类依据"
+  },
+  {
+    "id": "R3",
+    "title": "国务院关于加快发展体育产业促进体育消费的若干意见",
+    "publisher": "国务院",
+    "year": 2014,
+    "identifier": "国发〔2014〕46号",
+    "url": "https://www.audit.gov.cn/n4/n18/c60243/content.html",
+    "verified": true,
+    "supports": "体育产业发展与统计治理的政策背景"
+  },
+  {
+    "id": "R4",
+    "title": "体育强国建设纲要",
+    "publisher": "国务院办公厅",
+    "year": 2019,
+    "identifier": "国办发〔2019〕40号",
+    "url": "https://app.www.gov.cn/govdata/gov/201909/02/447907/article.html",
+    "verified": true,
+    "supports": "体育治理现代化与产业高质量发展的政策背景"
+  },
+  {
+    "id": "R5",
+    "title": "Text as Data",
+    "authors": "Gentzkow, M.; Kelly, B.; Taddy, M.",
+    "publisher": "Journal of Economic Literature",
+    "year": 2019,
+    "identifier": "10.1257/jel.20181020",
+    "url": "https://www.aeaweb.org/articles?id=10.1257%2Fjel.20181020",
+    "verified": true,
+    "supports": "将文本作为经济研究数据的基本方法论"
+  },
+  {
+    "id": "R6",
+    "title": "Term-weighting approaches in automatic text retrieval",
+    "authors": "Salton, G.; Buckley, C.",
+    "publisher": "Information Processing & Management",
+    "year": 1988,
+    "identifier": "10.1016/0306-4573(88)90021-0",
+    "url": "https://www.sciencedirect.com/science/article/pii/0306457388900210",
+    "verified": true,
+    "supports": "TF-IDF及词项加权依据"
+  },
+  {
+    "id": "R7",
+    "title": "jieba 中文分词项目",
+    "authors": "fxsjy",
+    "publisher": "GitHub",
+    "year": 2026,
+    "identifier": "fxsjy/jieba",
+    "url": "https://github.com/fxsjy/jieba",
+    "verified": true,
+    "supports": "系统实际使用的中文分词组件及自定义词典能力"
+  },
+  {
+    "id": "R8",
+    "title": "The Analytic Hierarchy Process: Planning, Priority Setting, Resource Allocation",
+    "authors": "Saaty, T. L.",
+    "publisher": "McGraw-Hill",
+    "year": 1980,
+    "identifier": "ISBN 0-07-054371-2",
+    "url": "https://books.google.com/books/about/The_Analytic_Hierarchy_Process.html?id=Xxi7AAAAIAAJ",
+    "verified": true,
+    "supports": "层次分析法的原始方法来源；仅在正文真实采用AHP时保留"
+  }
+]

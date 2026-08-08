@@ -1,0 +1,405 @@
+{
+  "overview": {
+    "total_enterprises": 76687,
+    "sport_enterprises": 8950,
+    "sport_ratio_pct": 11.67,
+    "crossover_count": 977,
+    "crossover_pct": 1.27,
+    "avg_sport_ratio_pct": 64.71,
+    "total_output_index": 579124.95
+  },
+  "regional_analysis": {
+    "top_cities": [
+      {
+        "region": "成都市",
+        "enterprise_count": 3694,
+        "sport_output_index": 237106.68,
+        "avg_sport_ratio": 0.6419,
+        "category_breakdown": {
+          "健身休闲": 80775.5,
+          "体育用品": 65940.48,
+          "体育赛事": 36290.37,
+          "体育培训": 22093.76,
+          "体育场馆": 17756.32
+        }
+      },
+      {
+        "region": "四川",
+        "enterprise_count": 2321,
+        "sport_output_index": 154383.11,
+        "avg_sport_ratio": 0.6652,
+        "category_breakdown": {
+          "体育用品": 53323.05,
+          "体育赛事": 30568.67,
+          "健身休闲": 28602.5,
+          "体育场馆": 16696.82,
+          "体育培训": 14070.53
+        }
+      },
+      {
+        "region": "未知",
+        "enterprise_count": 597,
+        "sport_output_index": 37972.28,
+        "avg_sport_ratio": 0.6361,
+        "category_breakdown": {
+          "健身休闲": 9444.36,
+          "体育用品": 9302.89,
+          "体育赛事": 6351.3,
+          "体育培训": 6096.73,
+          "体育管理": 3330.24
+        }
+      },
+      {
+        "region": "绵阳市",
+        "enterprise_count": 192,
+        "sport_output_index": 12523.93,
+        "avg_sport_ratio": 0.6523,
+        "category_breakdown": {
+          "健身休闲": 4304.26,
+          "体育用品": 3941.39,
+          "体育培训": 1461.51,
+          "体育赛事": 1270.26,
+          "体育管理": 956.24
+        }
+      },
+      {
+        "region": "宜宾市",
+        "enterprise_count": 156,
+        "sport_output_index": 9985.3,
+        "avg_sport_ratio": 0.6401,
+        "category_breakdown": {
+          "体育用品": 3862.73,
+          "健身休闲": 2533.45,
+          "体育赛事": 1574.84,
+          "体育培训": 1354.01,
+          "体育场馆": 437.91
+        }
+      },
+      {
+        "region": "泸州市",
+        "enterprise_count": 166,
+        "sport_output_index": 9726.56,
+        "avg_sport_ratio": 0.5859,
+        "category_breakdown": {
+          "体育用品": 2796.77,
+          "健身休闲": 2701.09,
+          "体育赛事": 1267.9,
+          "体育培训": 1045.96,
+          "体育管理": 1041.24
+        }
+      },
+      {
+        "region": "乐山市",
+        "enterprise_count": 149,
+        "sport_output_index": 9664.33,
+        "avg_sport_ratio": 0.6486,
+        "category_breakdown": {
+          "健身休闲": 3015.11,
+          "体育用品": 2967.88,
+          "体育赛事": 1489.84,
+          "体育培训": 1206.93,
+          "体育场馆": 809.85
+        }
+      },
+      {
+        "region": "南充市",
+        "enterprise_count": 124,
+        "sport_output_index": 8408.65,
+        "avg_sport_ratio": 0.6781,
+        "category_breakdown": {
+          "体育用品": 2795.52,
+          "健身休闲": 2387.06,
+          "体育场馆": 982.21,
+          "体育培训": 828.74,
+          "体育赛事": 764.99
+        }
+      },
+      {
+        "region": "攀枝花市",
+        "enterprise_count": 90,
+        "sport_output_index": 6269.09,
+        "avg_sport_ratio": 0.6966,
+        "category_breakdown": {
+          "健身休闲": 1522.9,
+          "体育赛事": 1444.98,
+          "体育用品": 1308.04,
+          "体育培训": 1164.43,
+          "体育场馆": 524.16
+        }
+      },
+      {
+        "region": "达州市",
+        "enterprise_count": 88,
+        "sport_output_index": 6267.98,
+        "avg_sport_ratio": 0.7123,
+        "category_breakdown": {
+          "体育用品": 2185.25,
+          "健身休闲": 1322.21,
+          "体育赛事": 1201.79,
+          "体育培训": 807.49,
+          "体育场馆": 436.8
+        }
+      }
+    ],
+    "top_districts": [
+      {
+        "region": "九寨沟县",
+        "enterprise_count": 5,
+        "sport_output_index": 304.58,
+        "avg_sport_ratio": 0.6092,
+        "category_breakdown": {
+          "体育赛事": 87.36,
+          "体育用品": 87.36,
+          "体育场馆": 87.36,
+          "体育培训": 21.25,
+          "健身休闲": 21.25
+        }
+      },
+      {
+        "region": "川省岳池县",
+        "enterprise_count": 2,
+        "sport_output_index": 160.97,
+        "avg_sport_ratio": 0.8049,
+        "category_breakdown": {
+          "体育用品": 160.97
+        }
+      },
+      {
+        "region": "宾三江新区",
+        "enterprise_count": 2,
+        "sport_output_index": 153.47,
+        "avg_sport_ratio": 0.7673,
+        "category_breakdown": {
+          "体育用品": 153.47
+        }
+      },
+      {
+        "region": "州龙马潭区",
+        "enterprise_count": 3,
+        "sport_output_index": 129.86,
+        "avg_sport_ratio": 0.4329,
+        "category_breakdown": {
+          "体育培训": 87.36,
+          "健身休闲": 42.5
+        }
+      },
+      {
+        "region": "泸州江阳区",
+        "enterprise_count": 2,
+        "sport_output_index": 108.61,
+        "avg_sport_ratio": 0.5431,
+        "category_breakdown": {
+          "体育管理": 87.36,
+          "健身休闲": 21.25
+        }
+      },
+      {
+        "region": "德瑞克园区",
+        "enterprise_count": 1,
+        "sport_output_index": 87.36,
+        "avg_sport_ratio": 0.8736,
+        "category_breakdown": {
+          "体育场馆": 87.36
+        }
+      },
+      {
+        "region": "绵阳高新区",
+        "enterprise_count": 1,
+        "sport_output_index": 87.36,
+        "avg_sport_ratio": 0.8736,
+        "category_breakdown": {
+          "体育培训": 87.36
+        }
+      },
+      {
+        "region": "技术开发区",
+        "enterprise_count": 1,
+        "sport_output_index": 87.36,
+        "avg_sport_ratio": 0.8736,
+        "category_breakdown": {
+          "体育培训": 87.36
+        }
+      },
+      {
+        "region": "内江东兴区",
+        "enterprise_count": 1,
+        "sport_output_index": 87.36,
+        "avg_sport_ratio": 0.8736,
+        "category_breakdown": {
+          "体育用品": 87.36
+        }
+      },
+      {
+        "region": "川省犍为县",
+        "enterprise_count": 1,
+        "sport_output_index": 87.36,
+        "avg_sport_ratio": 0.8736,
+        "category_breakdown": {
+          "体育培训": 87.36
+        }
+      }
+    ],
+    "spatial_concentration": {
+      "cr3": 0.7416,
+      "cr5": 0.7804,
+      "cr3_pct": 74.2,
+      "cr5_pct": 78.0,
+      "hhi": 2454.9,
+      "gini": 0.9217,
+      "total_regions": 172,
+      "conclusion": "高度集中：前3名区域占据 74.2% 的体育产出，呈现明显的中心-外围结构"
+    }
+  },
+  "category_analysis": {
+    "categories": [
+      {
+        "category": "体育用品",
+        "enterprise_count": 2265,
+        "output_index": 171922.45,
+        "output_share_pct": 29.69,
+        "avg_sport_ratio": 0.759,
+        "crossover_count": 155,
+        "crossover_pct": 6.84
+      },
+      {
+        "category": "健身休闲",
+        "enterprise_count": 3134,
+        "output_index": 156283.82,
+        "output_share_pct": 26.99,
+        "avg_sport_ratio": 0.4987,
+        "crossover_count": 74,
+        "crossover_pct": 2.36
+      },
+      {
+        "category": "体育赛事",
+        "enterprise_count": 1241,
+        "output_index": 98301.53,
+        "output_share_pct": 16.97,
+        "avg_sport_ratio": 0.7921,
+        "crossover_count": 448,
+        "crossover_pct": 36.1
+      },
+      {
+        "category": "体育培训",
+        "enterprise_count": 895,
+        "output_index": 65306.85,
+        "output_share_pct": 11.28,
+        "avg_sport_ratio": 0.7297,
+        "crossover_count": 34,
+        "crossover_pct": 3.8
+      },
+      {
+        "category": "体育场馆",
+        "enterprise_count": 601,
+        "output_index": 47614.5,
+        "output_share_pct": 8.22,
+        "avg_sport_ratio": 0.7923,
+        "crossover_count": 57,
+        "crossover_pct": 9.48
+      },
+      {
+        "category": "体育管理",
+        "enterprise_count": 754,
+        "output_index": 35561.84,
+        "output_share_pct": 6.14,
+        "avg_sport_ratio": 0.4716,
+        "crossover_count": 154,
+        "crossover_pct": 20.42
+      },
+      {
+        "category": "电子竞技",
+        "enterprise_count": 43,
+        "output_index": 2928.84,
+        "output_share_pct": 0.51,
+        "avg_sport_ratio": 0.6811,
+        "crossover_count": 39,
+        "crossover_pct": 90.7
+      },
+      {
+        "category": "体育传媒",
+        "enterprise_count": 16,
+        "output_index": 1139.01,
+        "output_share_pct": 0.2,
+        "avg_sport_ratio": 0.7119,
+        "crossover_count": 15,
+        "crossover_pct": 93.75
+      },
+      {
+        "category": "体育彩票",
+        "enterprise_count": 1,
+        "output_index": 66.11,
+        "output_share_pct": 0.01,
+        "avg_sport_ratio": 0.6611,
+        "crossover_count": 1,
+        "crossover_pct": 100.0
+      }
+    ]
+  },
+  "structure_analysis": {
+    "diversity_index": 0.7638,
+    "entropy": 1.6782,
+    "category_count": 9,
+    "dominant_category": {
+      "name": "体育用品",
+      "share_pct": 29.69
+    },
+    "crossover_rate_pct": 10.92,
+    "balance_assessment": "业态较为多元，存在主导业态",
+    "region_specialization": [
+      {
+        "region": "成都市",
+        "dominant_category": "健身休闲",
+        "dominant_share_pct": 34.1
+      },
+      {
+        "region": "四川",
+        "dominant_category": "体育用品",
+        "dominant_share_pct": 34.5
+      },
+      {
+        "region": "未知",
+        "dominant_category": "健身休闲",
+        "dominant_share_pct": 24.9
+      },
+      {
+        "region": "绵阳市",
+        "dominant_category": "健身休闲",
+        "dominant_share_pct": 34.4
+      },
+      {
+        "region": "宜宾市",
+        "dominant_category": "体育用品",
+        "dominant_share_pct": 38.7
+      },
+      {
+        "region": "泸州市",
+        "dominant_category": "体育用品",
+        "dominant_share_pct": 28.8
+      },
+      {
+        "region": "乐山市",
+        "dominant_category": "健身休闲",
+        "dominant_share_pct": 31.2
+      },
+      {
+        "region": "南充市",
+        "dominant_category": "体育用品",
+        "dominant_share_pct": 33.2
+      },
+      {
+        "region": "攀枝花市",
+        "dominant_category": "健身休闲",
+        "dominant_share_pct": 24.3
+      },
+      {
+        "region": "达州市",
+        "dominant_category": "体育用品",
+        "dominant_share_pct": 34.9
+      }
+    ]
+  },
+  "data_quality": {
+    "region_coverage": 172,
+    "regions_with_data": 172
+  }
+}

@@ -1,0 +1,160 @@
+[
+  {
+    "file": "01_研究论证闭环.png",
+    "title": "研究问题、方法与验证闭环",
+    "source_keys": [
+      "design_spec",
+      "data_audit.conflicts"
+    ],
+    "path": "F:\\比赛\\大数据要素分析\\paper_revision\\assets\\figures\\01_研究论证闭环.png",
+    "generated_at": "2026-08-01T20:43:33.788361+08:00",
+    "width_px": 2617,
+    "height_px": 1492,
+    "dpi": [
+      300.0,
+      300.0
+    ]
+  },
+  {
+    "file": "02_数据处理流程.png",
+    "title": "数据治理与可追溯处理流程",
+    "source_keys": [
+      "raw_data_quality",
+      "sources"
+    ],
+    "path": "F:\\比赛\\大数据要素分析\\paper_revision\\assets\\figures\\02_数据处理流程.png",
+    "generated_at": "2026-08-01T20:43:33.790887+08:00",
+    "width_px": 2617,
+    "height_px": 1492,
+    "dpi": [
+      300.0,
+      300.0
+    ]
+  },
+  {
+    "file": "03_双通道识别框架.png",
+    "title": "文本与行业代码双通道识别框架",
+    "source_keys": [
+      "backend.utils.industry_code",
+      "backend.services.sport_recognition"
+    ],
+    "path": "F:\\比赛\\大数据要素分析\\paper_revision\\assets\\figures\\03_双通道识别框架.png",
+    "generated_at": "2026-08-01T20:43:33.790887+08:00",
+    "width_px": 2617,
+    "height_px": 1492,
+    "dpi": [
+      300.0,
+      300.0
+    ]
+  },
+  {
+    "file": "04_SportRatio测算流程.png",
+    "title": "SportRatio 四维加权测算流程",
+    "source_keys": [
+      "backend.services.sport_recognition.feature_weights"
+    ],
+    "path": "F:\\比赛\\大数据要素分析\\paper_revision\\assets\\figures\\04_SportRatio测算流程.png",
+    "generated_at": "2026-08-01T20:43:33.793050+08:00",
+    "width_px": 2617,
+    "height_px": 1492,
+    "dpi": [
+      300.0,
+      300.0
+    ]
+  },
+  {
+    "file": "05_识别范围对比.png",
+    "title": "传统行业代码法与融合识别法的识别范围对比",
+    "source_keys": [
+      "snapshot.traditional_sport_enterprises",
+      "snapshot.fusion_sport_enterprises"
+    ],
+    "path": "F:\\比赛\\大数据要素分析\\paper_revision\\assets\\figures\\05_识别范围对比.png",
+    "generated_at": "2026-08-01T20:43:33.794064+08:00",
+    "width_px": 2970,
+    "height_px": 1711,
+    "dpi": [
+      300.0,
+      300.0
+    ]
+  },
+  {
+    "file": "06_体育业务占比分布.png",
+    "title": "全样本体育业务占比分布",
+    "source_keys": [
+      "ratio_distribution"
+    ],
+    "path": "F:\\比赛\\大数据要素分析\\paper_revision\\assets\\figures\\06_体育业务占比分布.png",
+    "generated_at": "2026-08-01T20:43:33.795064+08:00",
+    "width_px": 2975,
+    "height_px": 1711,
+    "dpi": [
+      300.0,
+      300.0
+    ]
+  },
+  {
+    "file": "07_业态结构与跨界率.png",
+    "title": "体育业态相对产出结构与跨界经营率",
+    "source_keys": [
+      "category_distribution"
+    ],
+    "path": "F:\\比赛\\大数据要素分析\\paper_revision\\assets\\figures\\07_业态结构与跨界率.png",
+    "generated_at": "2026-08-01T20:43:33.796121+08:00",
+    "width_px": 3551,
+    "height_px": 2075,
+    "dpi": [
+      300.0,
+      300.0
+    ]
+  },
+  {
+    "file": "08_区域相对产出指数.png",
+    "title": "地级市体育业务相对产出指数前十位",
+    "source_keys": [
+      "city_top10",
+      "snapshot.region_source_limitation"
+    ],
+    "path": "F:\\比赛\\大数据要素分析\\paper_revision\\assets\\figures\\08_区域相对产出指数.png",
+    "generated_at": "2026-08-01T20:43:33.797119+08:00",
+    "width_px": 3095,
+    "height_px": 1923,
+    "dpi": [
+      300.0,
+      300.0
+    ]
+  },
+  {
+    "file": "09_系统技术架构.png",
+    "title": "SportFusion 系统技术架构",
+    "source_keys": [
+      "backend",
+      "frontend",
+      "README"
+    ],
+    "path": "F:\\比赛\\大数据要素分析\\paper_revision\\assets\\figures\\09_系统技术架构.png",
+    "generated_at": "2026-08-01T20:43:33.798632+08:00",
+    "width_px": 2617,
+    "height_px": 1492,
+    "dpi": [
+      300.0,
+      300.0
+    ]
+  },
+  {
+    "file": "10_证据分级与处理规则.png",
+    "title": "数字证据分级与处理规则",
+    "source_keys": [
+      "conflicts",
+      "sources"
+    ],
+    "path": "F:\\比赛\\大数据要素分析\\paper_revision\\assets\\figures\\10_证据分级与处理规则.png",
+    "generated_at": "2026-08-01T20:43:33.798632+08:00",
+    "width_px": 2617,
+    "height_px": 1492,
+    "dpi": [
+      300.0,
+      300.0
+    ]
+  }
+]

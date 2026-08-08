@@ -1,0 +1,42 @@
+[
+  {
+    "label": "监测驾驶舱",
+    "route": "/monitoring",
+    "url": "http://127.0.0.1:5173/monitoring",
+    "filename": "01_监测驾驶舱.png",
+    "mode": "界面含演示或模拟标识",
+    "captured_at": "2026-08-01T12:46:06.390Z"
+  },
+  {
+    "label": "企业识别",
+    "route": "/recognition",
+    "url": "http://127.0.0.1:5173/recognition",
+    "filename": "02_企业识别.png",
+    "mode": "界面含演示或模拟标识",
+    "captured_at": "2026-08-01T12:46:08.593Z"
+  },
+  {
+    "label": "产业分析",
+    "route": "/industry-analysis",
+    "url": "http://127.0.0.1:5173/industry-analysis",
+    "filename": "03_产业分析.png",
+    "mode": "界面含演示或模拟标识",
+    "captured_at": "2026-08-01T12:46:11.026Z"
+  },
+  {
+    "label": "模型评估",
+    "route": "/model-evaluation",
+    "url": "http://127.0.0.1:5173/model-evaluation",
+    "filename": "04_模型评估.png",
+    "mode": "界面含演示或模拟标识",
+    "captured_at": "2026-08-01T12:46:13.251Z"
+  },
+  {
+    "label": "风险中心",
+    "route": "/risks",
+    "url": "http://127.0.0.1:5173/risks",
+    "filename": "05_风险中心.png",
+    "mode": "界面含演示或模拟标识",
+    "captured_at": "2026-08-01T12:46:15.515Z"
+  }
+]

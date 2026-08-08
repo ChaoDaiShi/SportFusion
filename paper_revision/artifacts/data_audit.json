@@ -1,0 +1,427 @@
+{
+  "generated_at": "2026-08-01T20:35:55.349556+08:00",
+  "method": "对原始Excel、正式重跑CSV/JSON及历史输出进行交叉核验",
+  "raw_data_quality": {
+    "rows": 76687,
+    "duplicate_rows": 0,
+    "duplicate_credit_codes": 0,
+    "missing_business_activity": 98,
+    "missing_industry_code": 0
+  },
+  "snapshot": {
+    "total_enterprises": 76687,
+    "traditional_sport_enterprises": 8016,
+    "fusion_sport_enterprises": 8950,
+    "crossover_enterprises": 977,
+    "traditional_coverage_pct": 10.45,
+    "fusion_coverage_pct": 11.67,
+    "incremental_enterprises": 934,
+    "relative_identification_increase_pct": 11.65,
+    "formal_batch": "20260801_203307",
+    "average_sport_ratio_pct_among_sport_enterprises": 64.71,
+    "total_output_index": 579124.95,
+    "output_index_definition": "体育企业的体育业务占比之和乘以100；属于相对指数，不是营业收入、增加值或货币产值。",
+    "crossover_rate_among_sport_enterprises_pct": 10.92,
+    "region_source_limitation": "区域由企业名称字符串抽取，不等同于工商注册地址；四川省本级与地级市并存。",
+    "spatial_concentration_all_regions": {
+      "cr3_pct": 77.33,
+      "cr5_pct": 81.35,
+      "hhi": 2867.64,
+      "gini": 0.823294
+    }
+  },
+  "ratio_distribution": {
+    "0": 48469,
+    "0-0.2": 19287,
+    "0.2-0.5": 2762,
+    "0.5-0.8": 916,
+    "0.8-1.0": 5253
+  },
+  "category_distribution": [
+    {
+      "category": "体育用品",
+      "enterprise_count": 2265,
+      "output_index": 171922.45,
+      "output_share_pct": 29.69,
+      "avg_sport_ratio": 0.759,
+      "crossover_count": 155,
+      "crossover_pct": 6.84
+    },
+    {
+      "category": "健身休闲",
+      "enterprise_count": 3134,
+      "output_index": 156283.82,
+      "output_share_pct": 26.99,
+      "avg_sport_ratio": 0.4987,
+      "crossover_count": 74,
+      "crossover_pct": 2.36
+    },
+    {
+      "category": "体育赛事",
+      "enterprise_count": 1241,
+      "output_index": 98301.53,
+      "output_share_pct": 16.97,
+      "avg_sport_ratio": 0.7921,
+      "crossover_count": 448,
+      "crossover_pct": 36.1
+    },
+    {
+      "category": "体育培训",
+      "enterprise_count": 895,
+      "output_index": 65306.85,
+      "output_share_pct": 11.28,
+      "avg_sport_ratio": 0.7297,
+      "crossover_count": 34,
+      "crossover_pct": 3.8
+    },
+    {
+      "category": "体育场馆",
+      "enterprise_count": 601,
+      "output_index": 47614.5,
+      "output_share_pct": 8.22,
+      "avg_sport_ratio": 0.7923,
+      "crossover_count": 57,
+      "crossover_pct": 9.48
+    },
+    {
+      "category": "体育管理",
+      "enterprise_count": 754,
+      "output_index": 35561.84,
+      "output_share_pct": 6.14,
+      "avg_sport_ratio": 0.4716,
+      "crossover_count": 154,
+      "crossover_pct": 20.42
+    },
+    {
+      "category": "电子竞技",
+      "enterprise_count": 43,
+      "output_index": 2928.84,
+      "output_share_pct": 0.51,
+      "avg_sport_ratio": 0.6811,
+      "crossover_count": 39,
+      "crossover_pct": 90.7
+    },
+    {
+      "category": "体育传媒",
+      "enterprise_count": 16,
+      "output_index": 1139.01,
+      "output_share_pct": 0.2,
+      "avg_sport_ratio": 0.7119,
+      "crossover_count": 15,
+      "crossover_pct": 93.75
+    },
+    {
+      "category": "体育彩票",
+      "enterprise_count": 1,
+      "output_index": 66.11,
+      "output_share_pct": 0.01,
+      "avg_sport_ratio": 0.6611,
+      "crossover_count": 1,
+      "crossover_pct": 100.0
+    }
+  ],
+  "city_top10": [
+    {
+      "区域": "成都市",
+      "体育企业数": 3704,
+      "产出指数": 237694.59,
+      "平均体育占比": 0.6417,
+      "主导业态": "健身休闲"
+    },
+    {
+      "区域": "绵阳市",
+      "体育企业数": 208,
+      "产出指数": 13636.0,
+      "平均体育占比": 0.6556,
+      "主导业态": "健身休闲"
+    },
+    {
+      "区域": "宜宾市",
+      "体育企业数": 188,
+      "产出指数": 11993.47,
+      "平均体育占比": 0.638,
+      "主导业态": "体育用品"
+    },
+    {
+      "区域": "泸州市",
+      "体育企业数": 189,
+      "产出指数": 11251.82,
+      "平均体育占比": 0.5953,
+      "主导业态": "健身休闲"
+    },
+    {
+      "区域": "乐山市",
+      "体育企业数": 159,
+      "产出指数": 10318.35,
+      "平均体育占比": 0.649,
+      "主导业态": "健身休闲"
+    },
+    {
+      "区域": "南充市",
+      "体育企业数": 146,
+      "产出指数": 9648.22,
+      "平均体育占比": 0.6608,
+      "主导业态": "体育用品"
+    },
+    {
+      "区域": "眉山市",
+      "体育企业数": 100,
+      "产出指数": 7010.47,
+      "平均体育占比": 0.701,
+      "主导业态": "体育赛事"
+    },
+    {
+      "区域": "自贡市",
+      "体育企业数": 106,
+      "产出指数": 6954.5,
+      "平均体育占比": 0.6561,
+      "主导业态": "体育赛事"
+    },
+    {
+      "区域": "达州市",
+      "体育企业数": 97,
+      "产出指数": 6834.64,
+      "平均体育占比": 0.7046,
+      "主导业态": "体育用品"
+    },
+    {
+      "区域": "攀枝花市",
+      "体育企业数": 91,
+      "产出指数": 6356.45,
+      "平均体育占比": 0.6985,
+      "主导业态": "健身休闲"
+    }
+  ],
+  "all_region_top10": [
+    {
+      "region": "成都市",
+      "output_index": 237694.59
+    },
+    {
+      "region": "四川省本级",
+      "output_index": 196516.19
+    },
+    {
+      "region": "绵阳市",
+      "output_index": 13636.0
+    },
+    {
+      "region": "宜宾市",
+      "output_index": 11993.47
+    },
+    {
+      "region": "泸州市",
+      "output_index": 11251.82
+    },
+    {
+      "region": "乐山市",
+      "output_index": 10318.35
+    },
+    {
+      "region": "南充市",
+      "output_index": 9648.22
+    },
+    {
+      "region": "眉山市",
+      "output_index": 7010.47
+    },
+    {
+      "region": "自贡市",
+      "output_index": 6954.5
+    },
+    {
+      "region": "达州市",
+      "output_index": 6834.64
+    }
+  ],
+  "conflicts": [
+    {
+      "id": "sport-enterprise-count",
+      "legacy_value": 9023,
+      "formal_value": 8950,
+      "decision": "采用全量边界识别结果8950；9023是预处理阶段的初筛子集，不作为最终识别结果。",
+      "evidence_grade": "A/B"
+    },
+    {
+      "id": "incremental-count-field",
+      "legacy_value": 100,
+      "formal_value": 934,
+      "decision": "模型验证JSON的incremental_count记录的是截断案例列表长度100，不是总体增量；总体增量使用summary中的934。",
+      "evidence_grade": "B"
+    },
+    {
+      "id": "coverage-vs-accuracy",
+      "legacy_value": "部分原稿将11.7%描述为准确率提升",
+      "formal_value": "相对识别数量增加11.65%（四舍五入为11.7%）",
+      "decision": "统一改为识别数量或识别覆盖范围的相对增加；没有人工金标准时不报告准确率提升。",
+      "evidence_grade": "A/B"
+    },
+    {
+      "id": "evaluation-evidence",
+      "legacy_value": "AUC=0.91、Kappa=0.86、Pearson r=0.72、n=300",
+      "formal_value": null,
+      "decision": "当前工作区未找到逐条人工标签、预测分数或标注者记录，相关指标均删除，不作为实证结果。",
+      "evidence_grade": "D"
+    },
+    {
+      "id": "output-index-not-currency",
+      "legacy_value": "部分原稿将产出指数写作产值或产业规模金额",
+      "formal_value": 579124.95,
+      "decision": "全文统一称相对产出指数；不得推断营业收入、增加值或货币规模。",
+      "evidence_grade": "A/B"
+    },
+    {
+      "id": "trend-and-economic-benefits",
+      "legacy_value": "2020—2028趋势预测、成本节省和资源错配金额",
+      "formal_value": null,
+      "decision": "缺少时间序列、成本台账和对照试验，删除确定性数字，改为应用情景与待验证效益。",
+      "evidence_grade": "D"
+    }
+  ],
+  "unsupported_metrics": [
+    "Accuracy",
+    "Precision",
+    "Recall",
+    "F1",
+    "AUC",
+    "Kappa",
+    "Pearson r",
+    "平台压力测试耗时",
+    "经济效益金额",
+    "2020—2028预测值"
+  ],
+  "sources": [
+    {
+      "path": "F:\\比赛\\大数据要素分析\\submission\\原始数据\\企业原始数据.xlsx",
+      "size_bytes": 3756373,
+      "modified_at": "2026-07-12T19:58:13.028471+08:00",
+      "sha256": "b6c46bdc21f3fc0457b68e3d42ee548d5806432a890df75704f74d5e994bd9e1",
+      "rows": 76687,
+      "columns": [
+        "统一社会信用代码",
+        "详细名称",
+        "行业代码",
+        "主要业务活动"
+      ]
+    },
+    {
+      "path": "F:\\比赛\\大数据要素分析\\data\\processed\\enterprise_dataset_20260629_160902.csv",
+      "size_bytes": 11986028,
+      "modified_at": "2026-06-29T16:09:02+08:00",
+      "sha256": "6826692cb013057cf92b5666022bb63deee8997430791fb0de14c64c6ae6e807",
+      "rows": 76687,
+      "columns": [
+        "统一社会信用代码",
+        "详细名称",
+        "行业代码",
+        "主要业务活动",
+        "分词结果",
+        "关键词",
+        "体育关键词",
+        "是否体育业务",
+        "体育业态分类",
+        "识别置信度",
+        "行业代码类型",
+        "文本长度",
+        "体育词命中数"
+      ]
+    },
+    {
+      "path": "F:\\比赛\\大数据要素分析\\data\\processed\\sport_enterprises_20260629_160902.csv",
+      "size_bytes": 1690782,
+      "modified_at": "2026-06-29T16:09:04+08:00",
+      "sha256": "1ddb62e62b8b02c844c95253ee1959aac70ffbf43befd0658fc0d78f6df1496d",
+      "rows": 9023,
+      "columns": [
+        "统一社会信用代码",
+        "详细名称",
+        "行业代码",
+        "主要业务活动",
+        "分词结果",
+        "关键词",
+        "体育关键词",
+        "是否体育业务",
+        "体育业态分类",
+        "识别置信度",
+        "行业代码类型",
+        "文本长度",
+        "体育词命中数"
+      ]
+    },
+    {
+      "path": "F:\\比赛\\大数据要素分析\\paper_revision\\recomputed\\sport_ratio_results_20260801_203307.csv",
+      "size_bytes": 10250490,
+      "modified_at": "2026-08-01T20:33:22.335559+08:00",
+      "sha256": "f473c87affbea5613c9095d4c85c15e8e255cf0c3a38f13e7f44c1a4ea8804c1",
+      "rows": 76687,
+      "columns": [
+        "统一社会信用代码",
+        "企业名称",
+        "行业代码",
+        "主要业务活动",
+        "是否体育",
+        "体育业态",
+        "体育业务占比",
+        "置信度",
+        "是否跨界",
+        "跨界类型",
+        "业务总线数",
+        "体育业务线数",
+        "区域"
+      ]
+    },
+    {
+      "path": "F:\\比赛\\大数据要素分析\\paper_revision\\recomputed\\model_validation_20260801_203307.json",
+      "size_bytes": 4084,
+      "modified_at": "2026-08-01T20:33:22.336883+08:00",
+      "sha256": "56cb0350e2caaffaf12d81985b9b3c16a202f0ab8e43de38c5e49721a6f7de27",
+      "rows": null,
+      "columns": null
+    },
+    {
+      "path": "F:\\比赛\\大数据要素分析\\paper_revision\\recomputed\\industry_analysis_20260801_203329.json",
+      "size_bytes": 9053,
+      "modified_at": "2026-08-01T20:33:35.875510+08:00",
+      "sha256": "377f5635970d12e4452bae35d723a2e9a1a0424f383d5e2d2de225d6afa76cb6",
+      "rows": null,
+      "columns": null
+    },
+    {
+      "path": "F:\\比赛\\大数据要素分析\\paper_revision\\recomputed\\region_detail_20260801_203329.csv",
+      "size_bytes": 505,
+      "modified_at": "2026-08-01T20:33:35.880673+08:00",
+      "sha256": "7beb2434411764f8f2cc6cdde34d0e43b5a022db826667c2c2c946e4a6f294d2",
+      "rows": 10,
+      "columns": [
+        "区域",
+        "体育企业数",
+        "产出指数",
+        "平均体育占比",
+        "主导业态"
+      ]
+    },
+    {
+      "path": "F:\\比赛\\大数据要素分析\\paper_revision\\recomputed\\category_detail_20260801_203329.csv",
+      "size_bytes": 530,
+      "modified_at": "2026-08-01T20:33:35.882674+08:00",
+      "sha256": "e6ee2a867c592c5d47f166621e4cfcdc62b4975ca0e38a332f019ef5f877c575",
+      "rows": 9,
+      "columns": [
+        "category",
+        "enterprise_count",
+        "output_index",
+        "output_share_pct",
+        "avg_sport_ratio",
+        "crossover_count",
+        "crossover_pct"
+      ]
+    }
+  ],
+  "cross_checks": {
+    "analysis_overview_matches": true,
+    "validation_summary_matches": true,
+    "category_enterprise_total": 8950,
+    "category_output_total": 579124.95,
+    "region_city_table_note": "region_detail仅含脚本判定的城市TOP10；CR3/CR5使用all_regions，包含四川省本级。"
+  }
+}

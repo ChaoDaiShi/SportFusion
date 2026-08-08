@@ -1,0 +1,47 @@
+# ============================================================
+# 体育产业测算平台 — 后端 Systemd 服务
+# 部署路径: /etc/systemd/system/sports-backend.service
+# 启动: systemctl start sports-backend
+# 开机自启: systemctl enable sports-backend
+# ============================================================
+
+[Unit]
+Description=Sports Industry Analysis Platform - Backend API
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+
+# 工作目录
+WorkingDirectory=/opt/sports-industry/backend
+
+# 启动命令（使用 venv 中的 uvicorn）
+ExecStart=/opt/sports-industry/backend/.venv/bin/uvicorn main:app \
+    --host 127.0.0.1 \
+    --port 8000 \
+    --workers 4 \
+    --log-level info \
+    --access-log
+
+# 环境变量
+EnvironmentFile=/opt/sports-industry/backend/.env
+Environment="PYTHONUNBUFFERED=1"
+
+# 重启策略
+Restart=always
+RestartSec=5
+
+# 日志
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=sports-backend
+
+# 进程清理
+KillMode=mixed
+KillSignal=SIGTERM
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target
