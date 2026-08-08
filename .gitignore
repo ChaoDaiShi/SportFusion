@@ -90,6 +90,7 @@ $RECYCLE.BIN/
 # Internal tools & temporary files
 .review/
 .superpowers/
+.worktrees/
 .uploads/
 temp_experiments/
 
