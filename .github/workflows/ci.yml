@@ -19,8 +19,13 @@ jobs:
           enable-cache: true
       - name: Sync locked Python environment
         run: uv sync --locked --dev
+      - name: Verify locked production requirements
+        run: |
+          export_file="$RUNNER_TEMP/sportfusion-requirements.txt"
+          uv export --locked --no-dev --format requirements-txt --no-hashes --no-header --output-file "$export_file"
+          tail -n +3 backend/requirements.txt | cmp -s - "$export_file"
       - name: Lint Phase 0 Python surfaces
-        run: uv run ruff check backend/core tests alembic
+        run: uv run ruff check conftest.py backend/core backend/tests tests alembic
       - name: Run backend and contract tests
         run: uv run pytest tests backend/tests -m "not formal_artifact"
 
