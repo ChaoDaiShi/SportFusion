@@ -1,0 +1,60 @@
+{
+  "batch_number": "BATCH-20260803-R1",
+  "boundary": {
+    "total_enterprises": 76687,
+    "traditional_count": 8016,
+    "fusion_count": 8950,
+    "intersection": 7999,
+    "only_fusion": 951,
+    "only_traditional": 17,
+    "net_increase": 934,
+    "net_increase_rate": 0.1165,
+    "crossover_count": 977,
+    "candidate_coverage_rate": 0.1167
+  },
+  "evidence_groups": {
+    "code_text_consistent": 4161,
+    "code_only": 2730,
+    "code_text_mismatch": 1181,
+    "text_incremental": 878
+  },
+  "sportshare_sources": {
+    "model_estimated": 6220,
+    "hierarchical_fallback": 2730
+  },
+  "validation": {
+    "binary": {"accuracy": 0.9544, "precision": 0.9403, "recall": 0.9947, "f1": 0.9668},
+    "category": {"accuracy": 0.9293, "macro_f1": 0.8671},
+    "sportshare": {"mae": 0.0125, "rmse": 0.0485, "r2": 0.9618, "spearman": 0.8476},
+    "reference_labels": {"total": 300, "sport": 190, "non_sport": 95, "insufficient": 15},
+    "binary_evaluable": 285,
+    "category_evaluable": 184,
+    "audit": {"passed": 24, "total": 24}
+  },
+  "scale": {
+    "official_total_100m_cny": 2170.80,
+    "baseline_alpha": 0.20,
+    "category_scale_100m_cny": {
+      "体育用品": 655.94,
+      "健身休闲": 649.40,
+      "体育培训": 230.91,
+      "体育赛事": 225.48,
+      "体育场馆": 198.47,
+      "体育管理": 145.41,
+      "体育传媒": 59.09,
+      "电子竞技": 5.97,
+      "体育彩票": 0.13
+    },
+    "boundary_in_100m_cny": 1978.86,
+    "boundary_out_100m_cny": 191.94,
+    "boundary_out_share": 0.0884,
+    "chengdu_100m_cny": 1225.53,
+    "chengdu_share": 0.5646,
+    "mapped_enterprises": 8908,
+    "unresolved_enterprises": 42,
+    "scenario_count": 12,
+    "boundary_out_scenario_min_100m_cny": 138.19,
+    "boundary_out_scenario_max_100m_cny": 228.45
+  },
+  "review_priority": {"P1": 2735, "P2": 1122, "P3": 1067, "P4": 4026}
+}
