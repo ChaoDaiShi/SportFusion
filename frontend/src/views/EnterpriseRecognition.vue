@@ -73,6 +73,16 @@
                 <el-descriptions-item label="匹配关键词" :span="3">
                   <el-tag v-for="kw in singleResult.keywords" :key="kw" size="small" style="margin:2px">{{ kw }}</el-tag>
                 </el-descriptions-item>
+                <el-descriptions-item v-if="singleResult.quality_flags && singleResult.quality_flags.length" label="数据质量" :span="3">
+                  <el-tag v-for="flag in singleResult.quality_flags" :key="flag" size="small" type="warning" style="margin:2px">{{ flag }}</el-tag>
+                </el-descriptions-item>
+                <el-descriptions-item v-if="singleResult.version_metadata" label="知识版本" :span="3">
+                  <span style="font-size:12px;color:#909399">
+                    词典: {{ singleResult.version_metadata.dictionary_version || '—' }}
+                    &nbsp;|&nbsp; 代码: {{ singleResult.version_metadata.industry_code_map_version || '—' }}
+                    &nbsp;|&nbsp; 特征: {{ singleResult.version_metadata.feature_schema_version || '—' }}
+                  </span>
+                </el-descriptions-item>
               </el-descriptions>
             </el-card>
           </el-col>
