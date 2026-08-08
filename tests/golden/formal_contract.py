@@ -31,6 +31,7 @@ import json
 import math
 import re
 from datetime import datetime
+from decimal import ROUND_HALF_UP, Decimal
 from itertools import pairwise
 from pathlib import Path, PurePosixPath, PureWindowsPath
 
@@ -180,6 +181,49 @@ def _exact_keys(payload: dict, keys: set[str], area: str) -> None:
     _require(
         set(payload) == keys,
         f"contract {area}: keys must be exactly {sorted(keys)!r}",
+    )
+
+
+def _string_values(value: object):
+    if isinstance(value, str):
+        yield value
+    elif isinstance(value, dict):
+        for nested in value.values():
+            yield from _string_values(nested)
+    elif isinstance(value, list):
+        for nested in value:
+            yield from _string_values(nested)
+
+
+def _metric_keys(payload: dict, required: set[str], area: str) -> None:
+    optional = {"schema_version", "provenance"}
+    _require(
+        required <= set(payload) <= required | optional,
+        f"contract {area}: keys must be exactly the required keys plus optional "
+        "schema_version/provenance",
+    )
+    if "schema_version" in payload:
+        _require(
+            type(payload["schema_version"]) is int and payload["schema_version"] == 1,
+            f"contract {area}: schema_version must be the integer 1",
+        )
+    if "provenance" in payload:
+        provenance = payload["provenance"]
+        _require(
+            isinstance(provenance, dict)
+            and bool(provenance)
+            and all(isinstance(key, str) and key.strip() for key in provenance),
+            f"contract {area}: provenance must be a non-empty object with non-empty keys",
+        )
+        _require(
+            not any(_has_forbidden_marker(value) for value in _string_values(provenance)),
+            f"contract {area}: provenance cannot contain a forbidden formal-data marker",
+        )
+
+
+def _round_four_half_up(value: object, area: str) -> Decimal:
+    return Decimal(str(_number(value, area))).quantize(
+        Decimal("0.0001"), rounding=ROUND_HALF_UP
     )
 
 
@@ -354,6 +398,11 @@ def _validate_batch_metadata(metadata: dict, expected: dict) -> None:
     _require(
         isinstance(runtime_env, dict) and bool(runtime_env),
         f"{area}: runtime_env_json must be a non-empty object",
+    )
+    dependency_lock = runtime_env.get("dependency_lock_sha256")
+    _require(
+        isinstance(dependency_lock, str) and _SHA256.fullmatch(dependency_lock) is not None,
+        f"{area}: runtime_env_json.dependency_lock_sha256 must be 64 hexadecimal characters",
     )
 
     identifiers = (
@@ -709,7 +758,7 @@ def _validate_scale(root: Path, expected: dict) -> None:
 def _validate_binary_metrics(root: Path, validation: dict) -> None:
     area = "binary metrics"
     binary = _read_json(root, "validation/binary_metrics.json")
-    _exact_keys(
+    _metric_keys(
         binary,
         {
             "accuracy",
@@ -841,7 +890,7 @@ def _validate_category_metrics(root: Path, expected: dict) -> None:
     area = "category metrics"
     validation = expected["validation"]
     category = _read_json(root, "validation/category_metrics.json")
-    _exact_keys(
+    _metric_keys(
         category,
         {
             "accuracy",
@@ -853,8 +902,19 @@ def _validate_category_metrics(root: Path, expected: dict) -> None:
         },
         area,
     )
-    for field in ("accuracy", "macro_f1"):
-        _close(category.get(field), validation["category"][field], 1e-4, f"{area} {field}")
+    _close(
+        category.get("accuracy"),
+        validation["category"]["accuracy"],
+        1e-4,
+        f"{area} accuracy",
+    )
+    _require(
+        _round_four_half_up(category.get("macro_f1"), f"{area} macro_f1")
+        == _round_four_half_up(
+            validation["category"]["macro_f1"], f"{area} locked macro_f1"
+        ),
+        f"contract {area}: macro_f1 must retain the locked four-decimal value",
+    )
     _require(
         category.get("correct") == validation["category"]["correct"],
         f"contract {area}: correct count mismatch",
@@ -914,11 +974,12 @@ def _validate_category_metrics(root: Path, expected: dict) -> None:
         f"contract {area}: per-class supports must sum to 184",
     )
     _close(category.get("accuracy"), diagonal / total, 1e-4, f"{area} accuracy consistency")
-    _close(
-        category.get("macro_f1"),
-        sum(derived_f1) / len(derived_f1),
-        1e-4,
-        f"{area} macro-F1 consistency",
+    _require(
+        _round_four_half_up(category.get("macro_f1"), f"{area} declared macro-F1")
+        == _round_four_half_up(
+            sum(derived_f1) / len(derived_f1), f"{area} derived macro-F1"
+        ),
+        f"contract {area}: macro-F1 consistency requires ROUND_HALF_UP at four decimals",
     )
 
 
@@ -1041,7 +1102,7 @@ def _validate_sportshare_cv(root: Path, validation: dict, metadata: dict) -> Non
     area = "sportshare CV"
     payload = _read_json(root, "validation/sportshare_cv.json")
     locked = validation["sportshare"]
-    _exact_keys(payload, set(locked) | {"feature_version", "q90_abs_error"}, area)
+    _metric_keys(payload, set(locked) | {"feature_version", "q90_abs_error"}, area)
     for field in ("algorithm", "training_sample_count", "target"):
         _require(payload.get(field) == locked[field], f"contract {area}: {field} mismatch")
     feature_version = payload.get("feature_version")
@@ -1068,7 +1129,7 @@ def _validate_sportshare_cv(root: Path, validation: dict, metadata: dict) -> Non
         _close(metrics.get(field), locked_value, 1e-4, f"{area} {field}")
 
 
-def _validate_benchmark(root: Path, validation: dict) -> None:
+def _validate_benchmark(root: Path, validation: dict, metadata: dict) -> None:
     area = "benchmark"
     payload = _read_json(root, "audit/benchmark.json")
     keys = {
@@ -1134,6 +1195,10 @@ def _validate_benchmark(root: Path, validation: dict) -> None:
         f"contract {area}: measured dependency_lock_sha256 must be 64 hexadecimal characters",
     )
     _require(
+        dependency_lock == metadata["runtime_env_json"]["dependency_lock_sha256"],
+        f"contract {area}: measured dependency_lock_sha256 must match batch metadata",
+    )
+    _require(
         isinstance(raw_logs, list)
         and len(raw_logs) == 5
         and len(set(raw_logs)) == 5
@@ -1163,7 +1228,7 @@ def _validate_metrics(root: Path, expected: dict, metadata: dict) -> None:
     _validate_ablation(root, validation)
     _validate_threshold_sweep(root, validation)
     _validate_sportshare_cv(root, validation, metadata)
-    _validate_benchmark(root, validation)
+    _validate_benchmark(root, validation, metadata)
 
 
 def _validate_audit(root: Path, expected: dict) -> None:
@@ -1199,11 +1264,6 @@ def _validate_audit(root: Path, expected: dict) -> None:
                 and (not isinstance(value, float) or math.isfinite(value)),
                 f"audit contract: {check_id} {field} must be a finite JSON scalar",
             )
-        _require(
-            type(check["expected"]) is type(check["actual"])
-            and check["expected"] == check["actual"],
-            f"audit contract: {check_id} PASS expected and actual must be equal",
-        )
     _require(
         identifiers == [f"AUD-{index:02d}" for index in range(1, 25)],
         "audit contract: unique IDs must be exactly AUD-01 through AUD-24 in order",

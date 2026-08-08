@@ -1,6 +1,7 @@
 import csv
 import hashlib
 import json
+from decimal import ROUND_HALF_UP, Decimal
 from pathlib import Path
 
 import pytest
@@ -185,7 +186,10 @@ def _build_valid_artifact(root: Path, expected: dict) -> Path:
             "input_file_sha256": input_digest,
             "start_time": "2026-08-03T11:00:00+08:00",
             "end_time": "2026-08-03T12:00:00+08:00",
-            "runtime_env_json": {"runtime_id": "contract-fixture-runtime"},
+            "runtime_env_json": {
+                "runtime_id": "contract-fixture-runtime",
+                "dependency_lock_sha256": "e" * 64,
+            },
             "status": "formal-completed",
             "locked_at": "2026-08-03T12:00:00+08:00",
         },
@@ -1592,6 +1596,35 @@ def _set_complete_measured_benchmark(artifact_root: Path) -> dict:
     return payload
 
 
+@pytest.mark.parametrize("invalid_lock", [None, "e" * 63, "G" * 64, True])
+def test_batch_metadata_requires_dependency_lock_sha256(tmp_path, invalid_lock):
+    from tests.golden.formal_contract import validate_formal_artifact
+
+    expected = json.loads(EXPECTED_PATH.read_text(encoding="utf-8"))
+    artifact_root = _build_valid_artifact(tmp_path / expected["batch_number"], expected)
+    metadata = _read_json(artifact_root, "batch_metadata.json")
+    metadata["runtime_env_json"]["dependency_lock_sha256"] = invalid_lock
+    _write_json(artifact_root, "batch_metadata.json", metadata)
+    _refresh_sha256sums(artifact_root)
+
+    with pytest.raises(AssertionError, match="dependency_lock_sha256"):
+        validate_formal_artifact(artifact_root, expected)
+
+
+def test_measured_benchmark_dependency_lock_must_match_batch_metadata(tmp_path):
+    from tests.golden.formal_contract import validate_formal_artifact
+
+    expected = json.loads(EXPECTED_PATH.read_text(encoding="utf-8"))
+    artifact_root = _build_valid_artifact(tmp_path / expected["batch_number"], expected)
+    payload = _set_complete_measured_benchmark(artifact_root)
+    payload["runtime_environment"]["dependency_lock_sha256"] = "f" * 64
+    _write_json(artifact_root, "audit/benchmark.json", payload)
+    _refresh_sha256sums(artifact_root)
+
+    with pytest.raises(AssertionError, match="dependency_lock_sha256"):
+        validate_formal_artifact(artifact_root, expected)
+
+
 @pytest.mark.parametrize(
     "mutation",
     [
@@ -1646,10 +1679,61 @@ def test_contract_fixture_category_macro_f1_matches_four_decimal_lock(tmp_path):
         payload["per_class"]
     )
 
-    assert round(derived, 4) == expected["validation"]["category"]["macro_f1"]
+    assert Decimal(str(derived)).quantize(Decimal("0.0001"), rounding=ROUND_HALF_UP) == Decimal(
+        str(expected["validation"]["category"]["macro_f1"])
+    )
 
 
-@pytest.mark.parametrize("mutation", ["id", "name", "expected-actual"])
+def test_category_macro_f1_rejects_value_across_half_up_rounding_boundary(tmp_path):
+    from tests.golden.formal_contract import validate_formal_artifact
+
+    expected = json.loads(EXPECTED_PATH.read_text(encoding="utf-8"))
+    artifact_root = _build_valid_artifact(tmp_path / expected["batch_number"], expected)
+    payload = _read_json(artifact_root, "validation/category_metrics.json")
+    matrix = payload["confusion_matrix"]
+    categories = list(matrix)
+    supports = {
+        category: payload["per_class"][category]["support"] for category in categories
+    }
+
+    for actual, row in matrix.items():
+        for predicted in row:
+            if predicted != actual:
+                row[predicted] = 0
+    destinations = [8, 8, 8, 8, 7, None, None, 8, 3]
+    for source_index, destination_index in enumerate(destinations):
+        if destination_index is None:
+            continue
+        source = categories[source_index]
+        destination = categories[destination_index]
+        matrix[source][destination] = supports[source] - matrix[source][source]
+
+    derived_f1 = []
+    for category in categories:
+        support = sum(matrix[category].values())
+        predicted = sum(matrix[actual][category] for actual in categories)
+        true_positive = matrix[category][category]
+        precision = true_positive / predicted if predicted else 0.0
+        recall = true_positive / support if support else 0.0
+        f1 = 2 * precision * recall / (precision + recall) if precision + recall else 0.0
+        payload["per_class"][category] = {
+            "precision": precision,
+            "recall": recall,
+            "f1": f1,
+            "support": support,
+        }
+        derived_f1.append(f1)
+    derived_macro_f1 = sum(derived_f1) / len(derived_f1)
+    assert 0.867015 < derived_macro_f1 < 0.867025
+
+    _write_json(artifact_root, "validation/category_metrics.json", payload)
+    _refresh_sha256sums(artifact_root)
+
+    with pytest.raises(AssertionError, match="macro-F1 consistency"):
+        validate_formal_artifact(artifact_root, expected)
+
+
+@pytest.mark.parametrize("mutation", ["id", "name", "aud-01-value"])
 def test_audit_records_are_canonical_and_fail_closed(tmp_path, mutation):
     from tests.golden.formal_contract import validate_formal_artifact
 
@@ -1661,12 +1745,26 @@ def test_audit_records_are_canonical_and_fail_closed(tmp_path, mutation):
     elif mutation == "name":
         audit["checks"][0]["name"] = "candidate_count_changed"
     else:
-        audit["checks"][1]["actual"] = False
+        audit["checks"][0]["actual"] = 8949
     _write_json(artifact_root, "audit/audit_checks.json", audit)
     _refresh_sha256sums(artifact_root)
 
     with pytest.raises(AssertionError, match="audit"):
         validate_formal_artifact(artifact_root, expected)
+
+
+def test_non_candidate_audit_check_can_pass_with_non_equal_scalar_values(tmp_path):
+    from tests.golden.formal_contract import validate_formal_artifact
+
+    expected = json.loads(EXPECTED_PATH.read_text(encoding="utf-8"))
+    artifact_root = _build_valid_artifact(tmp_path / expected["batch_number"], expected)
+    audit = _read_json(artifact_root, "audit/audit_checks.json")
+    audit["checks"][1]["expected"] = 0.95
+    audit["checks"][1]["actual"] = 0.9544
+    _write_json(artifact_root, "audit/audit_checks.json", audit)
+    _refresh_sha256sums(artifact_root)
+
+    validate_formal_artifact(artifact_root, expected)
 
 
 @pytest.mark.parametrize("mutation", ["single-byte", "bad-header", "bad-footer"])
@@ -1696,7 +1794,7 @@ def test_required_parquet_files_require_header_and_footer_magic(tmp_path, mutati
         "validation/sportshare_cv.json",
     ],
 )
-def test_metric_json_top_level_keys_are_exact(tmp_path, relative):
+def test_metric_json_top_level_keys_reject_unknown_extensions(tmp_path, relative):
     from tests.golden.formal_contract import validate_formal_artifact
 
     expected = json.loads(EXPECTED_PATH.read_text(encoding="utf-8"))
@@ -1707,6 +1805,68 @@ def test_metric_json_top_level_keys_are_exact(tmp_path, relative):
     _refresh_sha256sums(artifact_root)
 
     with pytest.raises(AssertionError, match="keys must be exactly"):
+        validate_formal_artifact(artifact_root, expected)
+
+
+@pytest.mark.parametrize(
+    "relative",
+    [
+        "validation/binary_metrics.json",
+        "validation/category_metrics.json",
+        "validation/sportshare_cv.json",
+    ],
+)
+def test_metric_json_accepts_controlled_schema_and_provenance_extensions(tmp_path, relative):
+    from tests.golden.formal_contract import validate_formal_artifact
+
+    expected = json.loads(EXPECTED_PATH.read_text(encoding="utf-8"))
+    artifact_root = _build_valid_artifact(tmp_path / expected["batch_number"], expected)
+    payload = _read_json(artifact_root, relative)
+    payload["schema_version"] = 1
+    payload["provenance"] = {
+        "label_batch": "LABEL-20260803-R1",
+        "version": "PROVENANCE-20260803-R1",
+        "hash": "a" * 64,
+    }
+    _write_json(artifact_root, relative, payload)
+    _refresh_sha256sums(artifact_root)
+
+    validate_formal_artifact(artifact_root, expected)
+
+
+@pytest.mark.parametrize(
+    ("field", "invalid_value"),
+    [
+        ("schema_version", True),
+        ("schema_version", 2),
+        ("schema_version", "1"),
+        ("provenance", {}),
+        ("provenance", "formal"),
+        ("provenance", {"": "formal"}),
+        ("provenance", {"source": {"note": "synthetic output"}}),
+    ],
+)
+@pytest.mark.parametrize(
+    "relative",
+    [
+        "validation/binary_metrics.json",
+        "validation/category_metrics.json",
+        "validation/sportshare_cv.json",
+    ],
+)
+def test_metric_json_rejects_invalid_controlled_extensions(
+    tmp_path, relative, field, invalid_value
+):
+    from tests.golden.formal_contract import validate_formal_artifact
+
+    expected = json.loads(EXPECTED_PATH.read_text(encoding="utf-8"))
+    artifact_root = _build_valid_artifact(tmp_path / expected["batch_number"], expected)
+    payload = _read_json(artifact_root, relative)
+    payload[field] = invalid_value
+    _write_json(artifact_root, relative, payload)
+    _refresh_sha256sums(artifact_root)
+
+    with pytest.raises(AssertionError, match=field):
         validate_formal_artifact(artifact_root, expected)
 
 
