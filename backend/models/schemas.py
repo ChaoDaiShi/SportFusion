@@ -78,6 +78,12 @@ class RecognitionResult(BaseModel):
     sport_lines: list[dict] = Field(default_factory=list, description="体育业务线详情")
     non_sport_lines: list[str] = Field(default_factory=list, description="非体育业务线")
     keywords: list[str] = Field(default_factory=list, description="匹配关键词")
+    version_metadata: dict | None = Field(
+        None, description="知识/参数版本元数据 (Phase 2)"
+    )
+    quality_flags: list[str] = Field(
+        default_factory=list, description="数据质量标记 (Phase 2)"
+    )
 
 
 class BatchRecognitionResult(BaseModel):

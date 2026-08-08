@@ -1,0 +1,33 @@
+{
+  "meta": {
+    "version": "MODEL-PARAMS-2026-08",
+    "name": "SportFusion Model Parameters",
+    "description": "W1-W4 feature weights and recognition thresholds",
+    "last_updated": "2026-08-08"
+  },
+  "feature_weights": {
+    "w1_business_scope": 0.40,
+    "w2_keyword_density": 0.25,
+    "w3_code_weight": 0.25,
+    "w4_category_coverage": 0.10
+  },
+  "code_type_weights": {
+    "direct": 0.85,
+    "indirect": 0.30,
+    "none": 0.0
+  },
+  "recognition_thresholds": {
+    "sport_score_candidate": 0.10,
+    "sport_score_weak_candidate": 0.05,
+    "keyword_score_per_term": 0.333,
+    "keyword_density_normalizer": 10.0
+  },
+  "confidence_levels": {
+    "direct_strong": 0.95,
+    "direct_standard": 0.85,
+    "direct_textless": 0.55,
+    "text_strong": 0.90,
+    "text_medium": 0.75,
+    "text_weak": 0.60
+  }
+}

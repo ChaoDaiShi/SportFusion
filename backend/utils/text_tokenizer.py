@@ -1,191 +1,62 @@
-"""文本分词工具 - 基于jieba分词的中文文本处理，含增强版体育产业关键词词典"""
+"""
+文本分词工具 — Phase 2: delegates to knowledge base + business_line_service
+
+保留旧 API 兼容，但实际逻辑委托给:
+    - knowledge.loader (词典加载)
+    - services.business_line_service (匹配/分类)
+    - services.text_normalization_service (文本清理)
+
+旧硬编码 SPORT_KEYWORDS_BY_CATEGORY 已迁移至:
+    backend/knowledge/sports_dictionary.json
+
+新增模块不应再从此文件导入；应使用 services.business_line_service。
+"""
+
+
 import jieba
-import jieba.analyse
-import re
-from typing import List, Set, Dict
 
-# ============================================================
-# 体育产业关键词词典（按业态分类，150+词）
-# ============================================================
-SPORT_KEYWORDS_BY_CATEGORY: Dict[str, List[str]] = {
-    "体育赛事": [
-        "体育赛事", "赛事运营", "赛事策划", "赛事组织", "赛事管理",
-        "马拉松", "篮球赛", "足球赛", "羽毛球赛", "乒乓球赛",
-        "游泳比赛", "自行车赛", "电竞比赛", "电子竞技赛事",
-        "体育竞赛", "体育比赛", "竞技体育", "职业体育",
-        "赛事执行", "赛事服务", "赛事推广", "赛事直播",
-        "运动会", "锦标赛", "联赛", "杯赛", "邀请赛",
-        "格斗赛事", "拳击赛事", "武术赛事", "越野赛",
-        "铁人三项", "体育表演", "体育展示",
-    ],
-    "健身休闲": [
-        "健身服务", "健身俱乐部", "健身房", "健身中心",
-        "瑜伽", "瑜伽馆", "普拉提", "舞蹈培训",
-        "游泳", "游泳馆", "游泳池", "水上运动",
-        "户外运动", "户外拓展", "登山", "攀岩",
-        "冰雪运动", "滑雪", "滑冰", "冰球",
-        "漂流", "潜水", "冲浪", "帆船", "皮划艇",
-        "射击", "射箭", "骑马", "马术",
-        "保龄球", "台球", "高尔夫", "壁球",
-        "武术", "跆拳道", "空手道", "柔道",
-        "体能训练", "减脂", "燃脂", "体适能",
-        "运动康复", "康复训练", "运动健身",
-        "体育休闲", "休闲体育", "康体", "养生运动",
-        "广场舞", "太极拳", "健步走", "跑步",
-    ],
-    "体育用品": [
-        "体育用品", "体育器材", "体育设备", "运动器材",
-        "体育用品制造", "运动用品制造", "体育装备",
-        "运动服装", "运动鞋", "运动服饰", "体育服装",
-        "健身器材", "跑步机", "椭圆机", "动感单车",
-        "球类用品", "足球", "篮球", "排球", "网球",
-        "羽毛球", "乒乓球", "高尔夫球", "台球桌",
-        "渔具", "钓具", "户外装备", "帐篷", "睡袋",
-        "体育护具", "运动护具", "头盔", "护膝",
-        "体育设施", "体育场地材料", "塑胶跑道",
-        "体育用品销售", "运动品牌", "体育用品批发",
-        "体育用品零售", "运动器材销售",
-    ],
-    "体育培训": [
-        "体育培训", "运动培训", "体育教育",
-        "篮球培训", "足球培训", "游泳培训", "网球培训",
-        "羽毛球培训", "乒乓球培训", "滑雪培训",
-        "足球青训", "篮球青训", "青少年体育",
-        "体适能培训", "体能训练", "中考体育",
-        "体育教练", "运动教练", "私人教练",
-        "体育特长", "体育特长生", "体育单招",
-        "武术培训", "跆拳道培训", "舞蹈培训",
-        "儿童体育", "幼儿体育", "少儿体能",
-        "体育夏令营", "体育冬令营", "运动营",
-        "体育考级", "体育等级", "运动技能",
-    ],
-    "体育场馆": [
-        "体育场馆", "体育场地", "体育设施", "运动场馆",
-        "体育馆", "体育场", "体育中心", "全民健身中心",
-        "游泳馆", "羽毛球馆", "篮球馆", "网球馆",
-        "足球场", "篮球场", "网球场", "排球场",
-        "溜冰场", "滑雪场", "滑冰场", "冰场",
-        "体育场地设施", "体育场地管理", "场馆运营",
-        "体育公园", "运动公园", "健身步道",
-        "体育综合体", "体育服务综合体",
-        "场馆租赁", "场地租赁", "体育场地租赁",
-    ],
-    "体育传媒": [
-        "体育传媒", "体育媒体", "体育新闻",
-        "赛事转播", "体育直播", "体育节目",
-        "体育营销", "体育推广", "体育广告",
-        "体育经纪", "运动员经纪", "体育明星",
-        "体育版权", "赛事版权", "体育IP",
-        "体育自媒体", "体育短视频", "体育内容",
-        "体育解说", "体育评论", "体育主播",
-        "体育数据", "体育统计", "体育分析",
-        "体育摄影", "体育摄像",
-    ],
-    "体育管理": [
-        "体育管理", "体育组织", "体育社团",
-        "体育协会", "体育俱乐部", "体育总会",
-        "体育咨询", "体育顾问", "体育规划",
-        "体育旅游", "体育小镇", "体育产业",
-        "体育投资", "体育基金", "体育金融",
-        "体育保险", "运动保险",
-        "体育科技", "体育互联网", "智慧体育",
-        "体育大数据", "体育信息化",
-        "体育服务", "体育运营", "体育文化",
-    ],
-    "电子竞技": [
-        "电子竞技", "电竞", "电子游戏竞技",
-        "电竞俱乐部", "电竞战队", "电竞比赛",
-        "电竞赛事", "电竞联赛", "电竞直播",
-        "电竞选手", "电竞教练", "电竞解说",
-        "电竞场馆", "电竞网吧", "电竞酒店",
-        "电竞教育", "电竞培训", "电竞专业",
-        "游戏竞技", "网络竞技", "数字体育",
-    ],
-    "体育彩票": [
-        "体育彩票", "竞彩", "足球彩票", "篮球彩票",
-        "体彩", "体育博彩", "赛事竞猜",
-    ],
-}
+# ---- 向后兼容：从知识库加载 ----
+from knowledge.loader import load_sports_dictionary
 
-# 扁平化关键词列表（用于 jieba 加载和快速匹配）
-SPORT_DICT: List[str] = []
+_dict_data = load_sports_dictionary()
+_cat_map = _dict_data.get("categories", {})
+
+# 重建旧式 SPORT_KEYWORDS_BY_CATEGORY (兼容旧 import)
+SPORT_KEYWORDS_BY_CATEGORY: dict[str, list[str]] = {}
+for term_entry in _dict_data.get("terms", []):
+    if term_entry.get("enabled", True):
+        cat_zh = term_entry["category"]
+        SPORT_KEYWORDS_BY_CATEGORY.setdefault(cat_zh, []).append(term_entry["term"])
+
+# 扁平化关键词列表
+SPORT_DICT: list[str] = []
 for _cat, _words in SPORT_KEYWORDS_BY_CATEGORY.items():
     SPORT_DICT.extend(_words)
 
-# 构建类别反向索引: word -> category
-_SPORT_WORD_TO_CATEGORY: Dict[str, str] = {}
-for _cat, _words in SPORT_KEYWORDS_BY_CATEGORY.items():
-    for _w in _words:
-        _SPORT_WORD_TO_CATEGORY[_w] = _cat
-
-# 注册到 jieba 词典
+# 注册到 jieba
 for word in SPORT_DICT:
     jieba.add_word(word)
 
-# ============================================================
-# 公开 API
-# ============================================================
-
-def get_sport_categories() -> List[str]:
-    """获取所有体育业态分类名"""
-    return list(SPORT_KEYWORDS_BY_CATEGORY.keys())
+# ---- 委托给统一服务 ----
 
 
-def get_sport_dict() -> List[str]:
-    """获取完整体育关键词列表"""
-    return SPORT_DICT
-
-
-def get_category_for_word(word: str) -> str:
-    """查询某个关键词属于哪个体育业态分类"""
-    return _SPORT_WORD_TO_CATEGORY.get(word, "")
-
-
-def tokenize(text: str) -> List[str]:
-    """对文本进行分词，去除标点和空白"""
+def tokenize(text: str) -> list[str]:
+    """分词（保留 jieba 行为兼容）"""
+    import re
     if not text:
         return []
-    # 清理特殊字符，保留中英文和数字
-    text = re.sub(r"[^一-龥a-zA-Z0-9]", " ", str(text))
+    text = re.sub(r"[^一-鿿a-zA-Z0-9]", " ", str(text))
     words = jieba.lcut(text)
     return [w.strip() for w in words if len(w.strip()) > 1]
 
 
-def extract_keywords(text: str, top_k: int = 10) -> List[str]:
-    """提取文本关键词（基于 TF-IDF）"""
+def extract_keywords(text: str, top_k: int = 10) -> list[str]:
+    """TF-IDF 关键词提取（保留兼容）"""
     if not text:
         return []
-    keywords = jieba.analyse.extract_tags(str(text), topK=top_k, withWeight=False)
-    return keywords
+    return jieba.analyse.extract_tags(str(text), topK=top_k, withWeight=False)
 
 
-def match_sport_keywords(text: str) -> List[str]:
-    """匹配文本中的体育相关关键词（返回命中的词列表）"""
-    words = tokenize(text)
-    sport_set = set(SPORT_DICT)
-    matched = []
-    seen = set()
-    for word in words:
-        if word in sport_set and word not in seen:
-            matched.append(word)
-            seen.add(word)
-    return matched
-
-
-def match_sport_by_category(text: str) -> Dict[str, List[str]]:
-    """按业态分类匹配体育关键词
-
-    Returns:
-        { "体育赛事": ["马拉松", "篮球赛"], "健身休闲": ["瑜伽"], ... }
-    """
-    matched = match_sport_keywords(text)
-    result: Dict[str, List[str]] = {}
-    for word in matched:
-        cat = _SPORT_WORD_TO_CATEGORY.get(word, "其他")
-        result.setdefault(cat, []).append(word)
-    return result
-
-
-def has_sport_content(text: str) -> bool:
-    """判断文本是否包含体育相关业务"""
-    return len(match_sport_keywords(text)) > 0
+def get_sport_dict() -> list[str]:
+    """获取完整体育关键词列表"""
+    return SPORT_DICT
