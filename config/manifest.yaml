@@ -1,0 +1,13 @@
+schema_version: 1
+config_id: CONFIG-MANIFEST
+version: PHASE0
+status: ready
+source: phase0_safety_net
+configs:
+  - {config_id: SPORT-SCORE-CONFIG, path: config/sportscore.yaml, version: NOT-IMPORTED, status: not_imported, sha256: null}
+  - {config_id: SPORT-SHARE-CONFIG, path: config/sportshare.yaml, version: NOT-IMPORTED, status: not_imported, sha256: null}
+  - {config_id: SPORTS-BUSINESS-DICTIONARY, path: config/sports_business_dictionary.yaml, version: NOT-IMPORTED, status: not_imported, sha256: null}
+  - {config_id: INDUSTRY-CODE-MAP, path: config/industry_code_map.yaml, version: NOT-IMPORTED, status: not_imported, sha256: null}
+  - {config_id: EVIDENCE-CALIBRATION, path: config/evidence_calibration.yaml, version: NOT-IMPORTED, status: not_imported, sha256: null}
+  - {config_id: OFFICIAL-STRUCTURE-2022, path: config/official_structure_2022.yaml, version: NOT-IMPORTED, status: not_imported, sha256: null}
+  - {config_id: SCALE-SCENARIOS, path: config/scale_scenarios.yaml, version: NOT-IMPORTED, status: not_imported, sha256: null}

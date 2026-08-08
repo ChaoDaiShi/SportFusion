@@ -1,0 +1,8 @@
+schema_version: 1
+config_id: OFFICIAL-STRUCTURE-2022
+version: NOT-IMPORTED
+status: not_imported
+source: report_alignment_migration
+reference_year: 2022
+official_total_output_100m_cny: null
+categories: []

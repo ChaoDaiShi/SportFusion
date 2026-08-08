@@ -1,0 +1,6 @@
+schema_version: 1
+config_id: INDUSTRY-CODE-MAP
+version: NOT-IMPORTED
+status: not_imported
+source: report_alignment_migration
+codes: []
