@@ -35,6 +35,8 @@
 
 ## Safe commands
 
+Alembic 的配置文件故意使用不可连接的哨兵 URL。`alembic/env.py` 会在创建迁移引擎或配置离线迁移上下文之前强制要求显式目标：命令行必须传入 `-x database_url=...`，程序调用必须通过 `Config.set_main_option("sqlalchemy.url", ...)` 覆盖哨兵。代码还会解析 SQLite 文件路径并拒绝当前项目的运行库；在 `.worktrees/<name>` 中运行时，也会拒绝主工作区的运行库。同名的 `sports_industry.db` 只有位于其他临时或副本目录时才允许使用。
+
 `upgrade head` 会执行迁移脚本并创建或变更数据库结构，只能用于新建数据库或明确可丢弃的临时数据库。以下 PowerShell 示例会解析一个新的临时数据库路径，并通过 `-x database_url=...` 显式传入 URL：
 
 ```powershell
