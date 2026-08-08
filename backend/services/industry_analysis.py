@@ -35,7 +35,7 @@ def aggregate_by_region(
             continue
         name = enterprises[i].get("name", "") if i < len(enterprises) else ""
         region = extract_region(name)
-        ratio = r.get("sport_ratio", 0)
+        ratio = r.get("sport_score", r.get("sport_ratio", 0))
         output_idx = ratio * 100  # 产出指数
         cat = r.get("sport_category", "")
 
@@ -86,7 +86,7 @@ def aggregate_by_category(results: List[Dict]) -> Dict[str, Any]:
         if not r.get("is_sport"):
             continue
         cat = r.get("sport_category", "其他")
-        ratio = r.get("sport_ratio", 0)
+        ratio = r.get("sport_score", r.get("sport_ratio", 0))
         output_idx = ratio * 100
 
         cat_data[cat]["count"] += 1

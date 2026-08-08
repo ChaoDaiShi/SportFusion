@@ -43,7 +43,7 @@ def compare_methods(
     for r in recognition_results:
         model_sport.append({
             "is_sport": r.get("is_sport", False),
-            "sport_ratio": r.get("sport_ratio", 0.0),
+            "sport_ratio": r.get("sport_score", r.get("sport_ratio", 0.0)),
             "method": "文本+代码融合识别",
             "basis": f"业务边界:{r.get('sport_business_lines', 0)}/{r.get('total_business_lines', 0)}, 置信度:{r.get('confidence', 0)}",
         })

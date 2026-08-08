@@ -89,8 +89,11 @@ def calculate_sport_output(
     industry_code: Optional[int] = None,
 ) -> Dict[str, Any]:
     """
-    基于体育业务占比计算体育产值
-    若无实际营收数据，使用归一化产出指数
+    基于体育业务证据评分计算体育产值/产出指数
+
+    TODO(Phase 4): 重命名 sport_ratio 参数为 sport_score，
+    并将此模块从旧比重语言迁移到 SportScore + SportShare 分离模型。
+    当前 sport_ratio 实际接收的是 SportScore。
     """
     if total_revenue > 0:
         sport_revenue = round(total_revenue * sport_ratio, 2)

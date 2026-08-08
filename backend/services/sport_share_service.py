@@ -174,7 +174,8 @@ def estimate_sport_share(
           main_factors, sport_category, ...
       }
     """
-    sport_ratio = recognition_result.get("sport_ratio", 0.0)
+    # Primary: sport_score; fallback: sport_ratio (legacy compat)
+    sport_ratio = recognition_result.get("sport_score", recognition_result.get("sport_ratio", 0.0))
     confidence = recognition_result.get("confidence", 0.0)
     sport_category = recognition_result.get("sport_category", "")
     is_sport = recognition_result.get("is_sport", False)

@@ -31,7 +31,8 @@ def determine_priority(recognition_result: Dict[str, Any]) -> str:
     code_type = recognition_result.get("code_type", "none")
     sport_category = recognition_result.get("sport_category", "")
     confidence = recognition_result.get("confidence", 0)
-    sport_ratio = recognition_result.get("sport_ratio", 0)
+    # Primary: sport_score; fallback: sport_ratio (legacy compat)
+    sport_ratio = recognition_result.get("sport_score", recognition_result.get("sport_ratio", 0))
     is_crossover = recognition_result.get("is_crossover", False)
     keywords = recognition_result.get("keywords", [])
     total_lines = recognition_result.get("total_business_lines", 0)
@@ -87,7 +88,7 @@ def generate_review_tasks(
     for i, result in enumerate(results):
         # 只对体育企业或边界企业生成复核任务
         is_sport = result.get("is_sport", False)
-        sport_ratio = result.get("sport_ratio", 0)
+        sport_ratio = result.get("sport_score", result.get("sport_ratio", 0))
         if not is_sport and sport_ratio < 0.05:
             continue
 
