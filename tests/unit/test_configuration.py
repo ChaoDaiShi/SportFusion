@@ -48,6 +48,22 @@ def test_load_config_rejects_empty_version(tmp_path):
         load_config(path)
 
 
+@pytest.mark.parametrize(
+    "content",
+    (
+        "config_id: SAMPLE\nversion: V1\nstatus: ready\n",
+        "schema_version: 2\nconfig_id: SAMPLE\nversion: V1\nstatus: ready\n",
+        "schema_version: '1'\nconfig_id: SAMPLE\nversion: V1\nstatus: ready\n",
+    ),
+)
+def test_load_config_rejects_missing_or_incompatible_schema_version(tmp_path, content):
+    path = write(tmp_path / "schema-version.yaml", content)
+    with pytest.raises(
+        ConfigurationVersionError, match=r"schema-version\.yaml.*schema_version"
+    ):
+        load_config(path)
+
+
 def test_require_formal_config_rejects_not_imported(tmp_path):
     path = write(
         tmp_path / "sportshare.yaml",

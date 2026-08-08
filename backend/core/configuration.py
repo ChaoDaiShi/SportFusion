@@ -4,11 +4,11 @@ from typing import Any
 
 import yaml
 
-from .versions import FORMAL_READY_STATUS, NOT_IMPORTED_VERSION
+from .versions import CONFIG_SCHEMA_VERSION, FORMAL_READY_STATUS, NOT_IMPORTED_VERSION
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 MANIFEST_PATH = PROJECT_ROOT / "config" / "manifest.yaml"
-REQUIRED_FIELDS = ("schema_version", "config_id", "version", "status")
+REQUIRED_FIELDS = ("config_id", "version", "status")
 
 
 class ConfigurationError(RuntimeError):
@@ -49,6 +49,11 @@ def load_config(path: Path) -> dict[str, Any]:
         raise ConfigurationParseError(f"无法读取配置 {path.name}: {exc}") from exc
     if not isinstance(payload, dict):
         raise ConfigurationParseError(f"配置 {path.name} 的根节点必须是映射")
+    schema_version = payload.get("schema_version")
+    if type(schema_version) is not int or schema_version != CONFIG_SCHEMA_VERSION:
+        raise ConfigurationVersionError(
+            f"配置 {path.name} 的 schema_version 必须为 {CONFIG_SCHEMA_VERSION}，当前为 {schema_version!r}"
+        )
     missing = [field for field in REQUIRED_FIELDS if field not in payload]
     if missing:
         raise ConfigurationParseError(f"配置 {path.name} 缺少字段: {', '.join(missing)}")
