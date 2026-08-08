@@ -170,15 +170,27 @@ def require_formal_config(path: Path) -> dict[str, Any]:
             f"Configuration {payload['config_id']} version differs from manifest version"
         )
 
-    registered_path = Path(PROJECT_ROOT).joinpath(*path_parts).resolve()
+    project_root = Path(PROJECT_ROOT).resolve()
+    registered_path = project_root.joinpath(*path_parts).resolve()
     supplied_path = path.resolve()
+    try:
+        registered_path_is_contained = (
+            registered_path != project_root
+            and registered_path.is_relative_to(project_root)
+        )
+    except (OSError, ValueError):
+        registered_path_is_contained = False
+    if not registered_path_is_contained:
+        raise FormalConfigurationUnavailable(
+            f"Configuration {payload['config_id']} path escapes the project root"
+        )
     if registered_path != supplied_path:
         raise FormalConfigurationUnavailable(
             f"Configuration {payload['config_id']} path differs from manifest path"
         )
 
     actual = sha256_file(path)
-    expected = entry["sha256"]
+    expected = entry["sha256"].lower()
     if actual != expected:
         raise ConfigurationHashMismatch(
             f"配置 {payload['config_id']} SHA256 不一致: expected={expected}, actual={actual}"

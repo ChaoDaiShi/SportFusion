@@ -172,6 +172,67 @@ def test_require_formal_config_returns_path_bound_verified_config(
     assert require_formal_config(path)["version"] == "V1"
 
 
+def test_require_formal_config_accepts_uppercase_sha256(tmp_path, monkeypatch):
+    path = prepare_formal_config(tmp_path, monkeypatch)
+    manifest = yaml.safe_load(configuration.MANIFEST_PATH.read_text(encoding="utf-8"))
+    manifest["configs"][0]["sha256"] = manifest["configs"][0]["sha256"].upper()
+    write_yaml(configuration.MANIFEST_PATH, manifest)
+
+    assert require_formal_config(path)["version"] == "V1"
+
+
+def test_require_formal_config_rejects_resolved_path_outside_project_root(
+    tmp_path, monkeypatch
+):
+    path = prepare_formal_config(tmp_path, monkeypatch)
+    original_resolve = Path.resolve
+    escaped_path = tmp_path.parent / "outside" / "sportscore.yaml"
+
+    def fake_resolve(candidate: Path, *args, **kwargs):
+        if candidate == path:
+            return escaped_path
+        return original_resolve(candidate, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "resolve", fake_resolve)
+
+    with pytest.raises(FormalConfigurationUnavailable, match="project root"):
+        require_formal_config(path)
+
+
+def test_require_formal_config_rejects_project_root_as_resolved_config_path(
+    tmp_path, monkeypatch
+):
+    path = prepare_formal_config(tmp_path, monkeypatch)
+    original_resolve = Path.resolve
+
+    def fake_resolve(candidate: Path, *args, **kwargs):
+        if candidate == path:
+            return tmp_path
+        return original_resolve(candidate, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "resolve", fake_resolve)
+
+    with pytest.raises(FormalConfigurationUnavailable, match="project root"):
+        require_formal_config(path)
+
+
+def test_require_formal_config_fails_closed_when_containment_check_errors(
+    tmp_path, monkeypatch
+):
+    path = prepare_formal_config(tmp_path, monkeypatch)
+    original_is_relative_to = Path.is_relative_to
+
+    def failing_is_relative_to(candidate: Path, other: Path):
+        if candidate == path:
+            raise ValueError("different drive")
+        return original_is_relative_to(candidate, other)
+
+    monkeypatch.setattr(Path, "is_relative_to", failing_is_relative_to)
+
+    with pytest.raises(FormalConfigurationUnavailable, match="project root"):
+        require_formal_config(path)
+
+
 def test_require_formal_config_rejects_same_content_at_unregistered_path(
     tmp_path, monkeypatch
 ):
