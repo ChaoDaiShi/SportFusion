@@ -3,9 +3,16 @@
 The Phase 0 schema is deliberately small and explicit. ``batch_metadata.json`` carries
 the Section 9.1 identity, version, hash, parameter, runtime, and lock fields.
 ``input_manifest.json`` repeats the batch/mode/input digest and declares one or more
-inputs with ``path``, ``sha256``, and non-empty ``provenance``. Metric JSON files use
-the names in the Golden fixture; category, region, and scenario CSV files are keyed by
-``category``, ``region``, and ``scenario_id``. No aliases or legacy layouts are inferred.
+inputs with ``path``, ``sha256``, and the typed exact provenance string ``"formal"``.
+Metric JSON files use the names in the Golden fixture. CSV headers are exact: category
+rows use ``category,scale_100m_cny``; region rows use
+``region,scale_100m_cny,share,mapping_status``; and scenario rows use
+``scenario_id,evidence_profile,alpha,total_output_100m_cny,boundary_in_100m_cny,``
+``boundary_out_100m_cny``. Region output has exactly 21 ``mapped`` rows. An unresolved
+aggregate is optional, but if present it is one ``mapping_status=unresolved`` row with
+the exact key ``__UNRESOLVED__`` and is excluded from the mapped-row/CR5 calculation.
+Scenario IDs are exactly ``{evidence_profile}-alpha-{alpha:.2f}``. No aliases, duplicate
+JSON keys, duplicate CSV headers, or legacy layouts are inferred.
 """
 
 import csv
@@ -13,6 +20,8 @@ import hashlib
 import json
 import math
 import re
+from datetime import datetime
+from itertools import pairwise
 from pathlib import Path, PurePosixPath, PureWindowsPath
 
 REQUIRED = (
@@ -34,12 +43,33 @@ REQUIRED = (
 
 _SHA256 = re.compile(r"^[0-9a-fA-F]{64}$")
 _SHA256_LINE = re.compile(r"^([0-9a-fA-F]{64}) ([ *])(.+)$")
-_FORBIDDEN_IDENTIFIER = re.compile(
-    r"(?:^|[-_\s])(not[-_]?imported|demo|test|legacy)(?:$|[-_\s])", re.IGNORECASE
-)
-_LEGACY_PROCESSED_BATCH = re.compile(
-    r"(?:^|/)processed_batch-[^/]+(?:/|$)", re.IGNORECASE
-)
+_FORBIDDEN_MARKERS = {
+    "demo",
+    "fallback",
+    "historical",
+    "legacy",
+    "mock",
+    "synthetic",
+    "test",
+}
+_CSV_HEADERS = {
+    "scale/category_scale.csv": ("category", "scale_100m_cny"),
+    "scale/region_scale.csv": ("region", "scale_100m_cny", "share", "mapping_status"),
+    "scale/scenarios.csv": (
+        "scenario_id",
+        "evidence_profile",
+        "alpha",
+        "total_output_100m_cny",
+        "boundary_in_100m_cny",
+        "boundary_out_100m_cny",
+    ),
+}
+_SCENARIO_PROFILES = ("conservative", "baseline", "expanded")
+_SCENARIO_ALPHAS = (0.0, 0.10, 0.20, 0.30)
+
+
+class _DuplicateJsonKey(ValueError):
+    pass
 
 
 def _require(condition: bool, message: str) -> None:
@@ -47,12 +77,33 @@ def _require(condition: bool, message: str) -> None:
         raise AssertionError(message)
 
 
-def _nonempty(value: object) -> bool:
-    if isinstance(value, str):
-        return bool(value.strip())
-    if isinstance(value, (dict, list, tuple, set)):
-        return bool(value)
-    return value is not None
+def _normalized_tokens(value: str) -> list[str]:
+    return re.findall(r"[a-z0-9]+", value.casefold())
+
+
+def _has_forbidden_marker(value: str) -> bool:
+    tokens = _normalized_tokens(value)
+    return any(token in _FORBIDDEN_MARKERS for token in tokens) or any(
+        first == "not" and second == "imported"
+        for first, second in pairwise(tokens)
+    )
+
+
+def _is_processed_batch_path(value: str) -> bool:
+    tokens = _normalized_tokens(value.replace("\\", "/"))
+    compact_tokens = {token.rstrip("es") for token in tokens}
+    return "processedbatch" in compact_tokens or (
+        "processed" in compact_tokens and "batch" in compact_tokens
+    )
+
+
+def _duplicate_aware_object(pairs: list[tuple[str, object]]) -> dict:
+    payload = {}
+    for key, value in pairs:
+        if key in payload:
+            raise _DuplicateJsonKey(key)
+        payload[key] = value
+    return payload
 
 
 def _number(value: object, area: str) -> float:
@@ -79,7 +130,14 @@ def _close(actual: object, expected: object, tolerance: float, area: str) -> Non
 
 def _read_json(root: Path, relative: str) -> dict:
     try:
-        payload = json.loads((root / relative).read_text(encoding="utf-8"))
+        payload = json.loads(
+            (root / relative).read_text(encoding="utf-8"),
+            object_pairs_hook=_duplicate_aware_object,
+        )
+    except _DuplicateJsonKey as error:
+        raise AssertionError(
+            f"contract {relative}: duplicate JSON key {error.args[0]!r}"
+        ) from error
     except (OSError, UnicodeError, json.JSONDecodeError) as error:
         raise AssertionError(f"contract {relative}: cannot read JSON") from error
     _require(isinstance(payload, dict), f"contract {relative}: expected a JSON object")
@@ -89,10 +147,27 @@ def _read_json(root: Path, relative: str) -> dict:
 def _read_csv(root: Path, relative: str) -> list[dict[str, str]]:
     try:
         with (root / relative).open(encoding="utf-8-sig", newline="") as stream:
-            rows = list(csv.DictReader(stream))
+            reader = csv.DictReader(stream)
+            headers = reader.fieldnames
+            _require(headers is not None, f"contract {relative}: missing CSV header")
+            _require(
+                len(headers) == len(set(headers)),
+                f"contract {relative}: duplicate CSV header",
+            )
+            expected_headers = _CSV_HEADERS[relative]
+            _require(
+                set(headers) == set(expected_headers),
+                f"contract {relative}: header must contain exactly {expected_headers!r}",
+            )
+            rows = list(reader)
     except (OSError, UnicodeError, csv.Error) as error:
         raise AssertionError(f"contract {relative}: cannot read CSV") from error
     _require(rows, f"contract {relative}: expected at least one row")
+    for index, row in enumerate(rows, start=1):
+        _require(
+            set(row) == set(expected_headers) and all(value is not None for value in row.values()),
+            f"contract {relative}: row {index} must contain the exact CSV keys",
+        )
     return rows
 
 
@@ -163,6 +238,19 @@ def _validate_required_files(artifact_root: Path) -> None:
     _require(not missing, f"contract required files: missing {missing!r}")
 
 
+def _timestamp(value: object, area: str) -> datetime:
+    _require(isinstance(value, str) and value.strip(), f"{area}: must be an ISO-8601 timestamp")
+    try:
+        parsed = datetime.fromisoformat(value)
+    except ValueError as error:
+        raise AssertionError(f"{area}: must be an ISO-8601 timestamp") from error
+    _require(
+        parsed.tzinfo is not None and parsed.utcoffset() is not None,
+        f"{area}: timestamp must be timezone-aware",
+    )
+    return parsed
+
+
 def _validate_batch_metadata(metadata: dict, expected: dict) -> None:
     area = "batch_metadata"
     _require(metadata.get("batch_number") == expected["batch_number"], f"{area}: batch mismatch")
@@ -171,8 +259,18 @@ def _validate_batch_metadata(metadata: dict, expected: dict) -> None:
         metadata.get("status") == "formal-completed",
         f"{area}: status must be exactly formal-completed",
     )
-    for field in ("start_time", "end_time", "locked_at", "runtime_env_json"):
-        _require(_nonempty(metadata.get(field)), f"{area}: {field} must be non-empty")
+    start_time = _timestamp(metadata.get("start_time"), f"{area}: start_time")
+    end_time = _timestamp(metadata.get("end_time"), f"{area}: end_time")
+    locked_at = _timestamp(metadata.get("locked_at"), f"{area}: locked_at")
+    _require(
+        start_time <= end_time <= locked_at,
+        f"{area}: timestamp order must be start_time <= end_time <= locked_at",
+    )
+    runtime_env = metadata.get("runtime_env_json")
+    _require(
+        isinstance(runtime_env, dict) and bool(runtime_env),
+        f"{area}: runtime_env_json must be a non-empty object",
+    )
 
     identifiers = (
         "data_version",
@@ -189,8 +287,8 @@ def _validate_batch_metadata(metadata: dict, expected: dict) -> None:
         value = metadata.get(field)
         _require(isinstance(value, str) and value.strip(), f"{area}: {field} must be non-empty")
         _require(
-            _FORBIDDEN_IDENTIFIER.search(value) is None,
-            f"{area}: {field} cannot identify NOT-IMPORTED/demo/test/legacy state",
+            not _has_forbidden_marker(value),
+            f"{area}: {field} cannot identify a forbidden formal-data state",
         )
 
     for field in (
@@ -223,7 +321,10 @@ def _validate_input_manifest(manifest: dict, metadata: dict, expected: dict) -> 
     _require(manifest.get("batch_number") == metadata["batch_number"], f"{area}: metadata mismatch")
     _require(manifest.get("mode") == "formal", f"{area}: mode must be exactly formal")
     _require(manifest.get("mode") == metadata["mode"], f"{area}: metadata mode mismatch")
-    _require(manifest.get("source_mode") == "formal", f"{area}: demo/legacy source mode rejected")
+    _require(
+        manifest.get("source_mode") == "formal",
+        f"{area}: source_mode must be exactly formal",
+    )
     digest = manifest.get("input_file_sha256")
     _require(
         isinstance(digest, str) and _SHA256.fullmatch(digest) is not None,
@@ -240,17 +341,22 @@ def _validate_input_manifest(manifest: dict, metadata: dict, expected: dict) -> 
         _require(isinstance(path, str) and path.strip(), f"{area}: input {index} path is required")
         normalized_path = path.replace("\\", "/")
         _require(
-            _LEGACY_PROCESSED_BATCH.search(normalized_path) is None,
-            f"{area}: legacy processed batch path rejected: {path}",
+            not _has_forbidden_marker(normalized_path),
+            f"{area}: forbidden marker in input path: {path}",
+        )
+        _require(
+            not _is_processed_batch_path(normalized_path),
+            f"{area}: legacy/processed batch path rejected: {path}",
         )
         item_digest = declared.get("sha256")
         _require(
             isinstance(item_digest, str) and _SHA256.fullmatch(item_digest) is not None,
             f"{area}: input {index} sha256 must be 64 hexadecimal characters",
         )
+        provenance = declared.get("provenance")
         _require(
-            _nonempty(declared.get("provenance")),
-            f"{area}: input {index} provenance is required",
+            isinstance(provenance, str) and provenance == "formal",
+            f"{area}: input {index} provenance must be the typed exact value 'formal'",
         )
         declared_hashes.append(item_digest)
     _require(digest in declared_hashes, f"{area}: no declared input binds the batch input hash")
@@ -290,6 +396,7 @@ def _key_rows(rows: list[dict[str, str]], key: str, area: str) -> dict[str, dict
     for row in rows:
         value = row.get(key)
         _require(value is not None and value.strip(), f"contract {area}: missing {key}")
+        _require(value == value.strip(), f"contract {area}: exact {key} keys cannot be padded")
         _require(value not in keyed, f"contract {area}: duplicate {key} {value!r}")
         keyed[value] = row
     return keyed
@@ -347,6 +454,34 @@ def _validate_scale(root: Path, expected: dict) -> None:
 
     region_rows = _read_csv(root, "scale/region_scale.csv")
     regions = _key_rows(region_rows, "region", "region scale")
+    mapped_region_rows = []
+    unresolved_region_rows = []
+    for row in region_rows:
+        mapping_status = row.get("mapping_status")
+        if mapping_status == "mapped":
+            _require(
+                row["region"] != "__UNRESOLVED__",
+                "contract region scale: __UNRESOLVED__ cannot be marked mapped",
+            )
+            mapped_region_rows.append(row)
+        elif mapping_status == "unresolved":
+            _require(
+                row["region"] == "__UNRESOLVED__",
+                "contract region scale: unresolved row must use __UNRESOLVED__",
+            )
+            unresolved_region_rows.append(row)
+        else:
+            raise AssertionError(
+                "contract region scale: mapping_status must be mapped or unresolved"
+            )
+    _require(
+        len(mapped_region_rows) == scale["region_mapped_row_count"] == 21,
+        "contract region scale: expected exactly 21 mapped rows",
+    )
+    _require(
+        len(unresolved_region_rows) <= 1,
+        "contract region scale: at most one __UNRESOLVED__ row is allowed",
+    )
     _close(
         sum(_number(row.get("scale_100m_cny"), "region scale") for row in region_rows),
         total,
@@ -354,6 +489,10 @@ def _validate_scale(root: Path, expected: dict) -> None:
         "region scale official total",
     )
     _require("成都市" in regions, "contract region scale: missing locked Chengdu row")
+    _require(
+        regions["成都市"].get("mapping_status") == "mapped",
+        "contract region scale: Chengdu must be a mapped row",
+    )
     _close(
         regions["成都市"].get("scale_100m_cny"),
         scale["chengdu_100m_cny"],
@@ -365,6 +504,19 @@ def _validate_scale(root: Path, expected: dict) -> None:
         scale["chengdu_share"],
         1e-4,
         "region scale Chengdu share",
+    )
+    mapped_values = sorted(
+        (
+            _number(row.get("scale_100m_cny"), "region scale mapped value")
+            for row in mapped_region_rows
+        ),
+        reverse=True,
+    )
+    _close(
+        sum(mapped_values[:5]) / total,
+        scale["region_top_five_share"],
+        1e-4,
+        "region scale top-five share",
     )
 
     scenario_rows = _read_csv(root, "scale/scenarios.csv")
@@ -378,11 +530,20 @@ def _validate_scale(root: Path, expected: dict) -> None:
     baseline_rows = []
     for row in scenario_rows:
         profile = row.get("evidence_profile")
-        _require(profile is not None and profile.strip(), "contract scenarios: evidence_profile required")
+        _require(
+            profile is not None and profile == profile.strip() and profile,
+            "contract scenarios: evidence_profile must be exact",
+        )
         alpha = _number(row.get("alpha"), "scenarios alpha")
         parameter_key = (profile, alpha)
         _require(parameter_key not in parameter_keys, "contract scenarios: duplicate parameter row")
         parameter_keys.add(parameter_key)
+        expected_scenario_id = f"{profile}-alpha-{alpha:.2f}"
+        _require(
+            row.get("scenario_id") == expected_scenario_id,
+            "contract scenarios: scenario_id must bind evidence_profile and alpha as "
+            "{evidence_profile}-alpha-{alpha:.2f}",
+        )
         scenario_total = _number(row.get("total_output_100m_cny"), "scenarios total")
         boundary_in = _number(row.get("boundary_in_100m_cny"), "scenarios boundary in")
         boundary_out = _number(row.get("boundary_out_100m_cny"), "scenarios boundary out")
@@ -393,6 +554,15 @@ def _validate_scale(root: Path, expected: dict) -> None:
             alpha, scale["baseline_alpha"], rel_tol=0.0, abs_tol=1e-9
         ):
             baseline_rows.append(row)
+    expected_parameter_keys = {
+        (profile, alpha)
+        for profile in _SCENARIO_PROFILES
+        for alpha in _SCENARIO_ALPHAS
+    }
+    _require(
+        parameter_keys == expected_parameter_keys,
+        "contract scenarios: parameter rows must equal the exact 3 x 4 profile/alpha grid",
+    )
     _require(len(baseline_rows) == 1, "contract scenarios: one baseline alpha row required")
     baseline = baseline_rows[0]
     _close(
@@ -454,12 +624,34 @@ def _validate_audit(root: Path, expected: dict) -> None:
     checks = audit.get("checks")
     _require(isinstance(checks, list) and len(checks) == 24, "audit contract: exactly 24 checks")
     identifiers = []
+    required_fields = {"check_id", "name", "status", "expected", "actual", "detail"}
     for index, check in enumerate(checks):
         _require(isinstance(check, dict), f"audit contract: check {index} must be an object")
+        missing_fields = required_fields - set(check)
+        _require(
+            not missing_fields,
+            f"audit contract: check {index} missing fields {sorted(missing_fields)!r}",
+        )
         check_id = check.get("check_id")
         _require(isinstance(check_id, str) and check_id.strip(), "audit contract: check_id required")
         identifiers.append(check_id)
-        _require(check.get("status") == "PASS", f"audit contract: {check_id} must PASS")
+        _require(
+            check.get("status") == "PASS",
+            f"audit contract: {check_id} status must PASS",
+        )
+        for field in ("name", "detail"):
+            value = check.get(field)
+            _require(
+                isinstance(value, str) and value.strip(),
+                f"audit contract: {check_id} {field} must be a non-empty string",
+            )
+        for field in ("expected", "actual"):
+            value = check.get(field)
+            _require(
+                isinstance(value, (str, int, float, bool))
+                and (not isinstance(value, float) or math.isfinite(value)),
+                f"audit contract: {check_id} {field} must be a finite JSON scalar",
+            )
     _require(len(set(identifiers)) == 24, "audit contract: checks must have unique IDs")
 
 

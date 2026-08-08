@@ -99,3 +99,80 @@ Result: `All checks passed!`
 The synthetic valid artifact includes one extra recursively nested evidence file to
 prove that coverage is not limited to `REQUIRED`. Synthetic artifacts are created only
 under pytest temporary directories and contain no claim of real formal results.
+
+## Follow-up: formal-contract ambiguity closure
+
+### Scope and source locks
+
+This follow-up remains test/support-only. It adds no real formal artifact and no
+production algorithm code. The Golden fixture gained only two source-locked region
+invariants: exactly 21 mapped city/prefecture rows and a top-five share of `0.7227`.
+Unknown city names/values and unknown interior scenario outputs were not added to the
+fixture. The valid artifact builder creates synthetic region values only inside pytest
+temporary directories.
+
+The minimal formal schema is now explicit:
+
+- input provenance is the typed exact string `formal`; marker tokens `legacy`, `demo`,
+  `test`, `historical`, `synthetic`, `mock`, and `fallback` are rejected case-insensitively
+  in identifiers and normalized input paths, and any processed-batch path is rejected;
+- lock timestamps are timezone-aware ISO-8601 values ordered as
+  `start_time <= end_time <= locked_at`; `runtime_env_json` is a nonempty object;
+- region CSV rows use exact headers `region,scale_100m_cny,share,mapping_status`, with
+  exactly 21 `mapped` rows; an optional unresolved aggregate uses the exact key
+  `__UNRESOLVED__` and `mapping_status=unresolved` and is excluded from CR5;
+- scenario CSV rows use the exact 3 x 4 grid
+  `{conservative,baseline,expanded} x {0,.10,.20,.30}` and IDs formatted as
+  `{evidence_profile}-alpha-{alpha:.2f}`; only the baseline, official total, and global
+  minimum/maximum remain numerically locked;
+- JSON parsing rejects duplicate keys at every object level; each CSV uses a documented
+  exact unique header set and exact row keys;
+- each of exactly 24 unique audit checks contains `check_id`, `name`, `status`,
+  `expected`, `actual`, and `detail`; every status is `PASS`, text fields are nonempty,
+  and expected/actual values are finite JSON scalars.
+
+### Test-first evidence
+
+RED command:
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests\golden\test_formal_contract_validator.py -q --basetemp=.pytest-tmp-formal-ambiguity-red
+```
+
+Result: `48 failed, 56 passed`. Failures reproduced the permissive provenance/path,
+timestamp/runtime, region/scenario, serialization, and audit-record bypasses. Raw JSON
+and CSV mutations bypassed the helper writers while retaining recomputed SHA manifests.
+
+Focused GREEN command:
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests\golden\test_formal_contract_validator.py -q --basetemp=.pytest-tmp-formal-ambiguity-focused-final
+```
+
+Result: `122 passed`.
+
+Full non-formal command:
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest -m "not formal_artifact" -q --basetemp=.pytest-tmp-formal-ambiguity-full
+```
+
+Result: `164 passed, 2 deselected, 1 xfailed`. The xfail remains the documented `P0-07`
+API compatibility case. Seven existing Pydantic deprecation warnings remain.
+
+Formal real-artifact command:
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests\golden\test_formal_artifact.py -m formal_artifact -q -rs --basetemp=.pytest-tmp-formal-ambiguity-formal
+```
+
+Result: `2 skipped`; both skip reasons list all 14 required formal files, including
+`SHA256SUMS`. No real formal artifact was created.
+
+Ruff command:
+
+```powershell
+.\.venv\Scripts\ruff.exe check backend\core tests alembic
+```
+
+Result: `All checks passed!`

@@ -52,6 +52,8 @@
     "chengdu_share": 0.5646,
     "mapped_enterprises": 8908,
     "unresolved_enterprises": 42,
+    "region_mapped_row_count": 21,
+    "region_top_five_share": 0.7227,
     "scenario_count": 12,
     "boundary_out_scenario_min_100m_cny": 138.19,
     "boundary_out_scenario_max_100m_cny": 228.45

@@ -35,6 +35,29 @@ def _refresh_sha256sums(root: Path) -> None:
     (root / "SHA256SUMS").write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
+def _synthetic_region_rows(scale: dict) -> list[dict[str, object]]:
+    """Build tmp-only values satisfying the source-locked 21-row/CR5 invariants."""
+    total = scale["official_total_100m_cny"]
+    values = [
+        scale["chengdu_100m_cny"],
+        85.83,
+        85.83,
+        85.83,
+        85.82,
+        *([37.62] * 15),
+        37.66,
+    ]
+    return [
+        {
+            "region": "成都市" if index == 1 else f"SYNTHETIC-REGION-{index:02d}",
+            "scale_100m_cny": value,
+            "share": scale["chengdu_share"] if index == 1 else value / total,
+            "mapping_status": "mapped",
+        }
+        for index, value in enumerate(values, start=1)
+    ]
+
+
 def _build_valid_artifact(root: Path, expected: dict) -> Path:
     root.mkdir(parents=True)
     batch_number = expected["batch_number"]
@@ -82,7 +105,7 @@ def _build_valid_artifact(root: Path, expected: dict) -> Path:
                 {
                     "path": "restricted-inputs/sportfusion-enterprises.csv",
                     "sha256": input_digest,
-                    "provenance": "restricted formal source",
+                    "provenance": "formal",
                 }
             ],
         },
@@ -108,20 +131,7 @@ def _build_valid_artifact(root: Path, expected: dict) -> Path:
     _write_csv(
         root,
         "scale/region_scale.csv",
-        [
-            {
-                "region": "成都市",
-                "scale_100m_cny": scale["chengdu_100m_cny"],
-                "share": scale["chengdu_share"],
-            },
-            {
-                "region": "其他市州",
-                "scale_100m_cny": (
-                    scale["official_total_100m_cny"] - scale["chengdu_100m_cny"]
-                ),
-                "share": 1 - scale["chengdu_share"],
-            },
-        ],
+        _synthetic_region_rows(scale),
     )
     _write_json(
         root,
@@ -323,6 +333,7 @@ def test_rejects_invalid_sha256sum_entries(tmp_path, mutation):
         ("end_time", ""),
         ("runtime_env_json", {}),
         ("data_version", ""),
+        ("data_version", True),
         ("model_version", "legacy-model"),
         ("feature_version", "demo-feature"),
         ("dictionary_version", "NOT-IMPORTED"),
@@ -502,4 +513,361 @@ def test_rejects_unsafe_sha256sum_paths(tmp_path, unsafe_path):
     manifest_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
     with pytest.raises(AssertionError, match="unsafe"):
+        validate_formal_artifact(artifact_root, expected)
+
+
+@pytest.mark.parametrize(
+    "invalid_provenance",
+    [
+        "legacy test dataset",
+        "FoRmAl",
+        "synthetic formal source",
+        True,
+        {"type": "formal"},
+    ],
+)
+def test_requires_typed_exact_formal_input_provenance(tmp_path, invalid_provenance):
+    from tests.golden.formal_contract import validate_formal_artifact
+
+    expected = json.loads(EXPECTED_PATH.read_text(encoding="utf-8"))
+    artifact_root = _build_valid_artifact(tmp_path / expected["batch_number"], expected)
+    manifest = _read_json(artifact_root, "input_manifest.json")
+    manifest["inputs"][0]["provenance"] = invalid_provenance
+    _write_json(artifact_root, "input_manifest.json", manifest)
+    _refresh_sha256sums(artifact_root)
+
+    with pytest.raises(AssertionError, match="provenance"):
+        validate_formal_artifact(artifact_root, expected)
+
+
+@pytest.mark.parametrize(
+    "invalid_path",
+    [
+        "data/demo/input.csv",
+        "data/test/input.csv",
+        "data/LeGaCy/input.csv",
+        "data/HiStOrIcAl/input.csv",
+        "data/MoCk/input.csv",
+        "data/synthetic/input.csv",
+        "data/fallback/input.csv",
+        "data\\DeMo\\input.csv",
+        "archive/processed-batches/BATCH-20260803-R1/input.csv",
+        "archive/processed/batch/BATCH-20260803-R1/input.csv",
+        "archive/ProcessedBatch/BATCH-20260803-R1/input.csv",
+    ],
+)
+def test_rejects_forbidden_normalized_input_path_segments(tmp_path, invalid_path):
+    from tests.golden.formal_contract import validate_formal_artifact
+
+    expected = json.loads(EXPECTED_PATH.read_text(encoding="utf-8"))
+    artifact_root = _build_valid_artifact(tmp_path / expected["batch_number"], expected)
+    manifest = _read_json(artifact_root, "input_manifest.json")
+    manifest["inputs"][0]["path"] = invalid_path
+    _write_json(artifact_root, "input_manifest.json", manifest)
+    _refresh_sha256sums(artifact_root)
+
+    with pytest.raises(AssertionError, match="input_manifest"):
+        validate_formal_artifact(artifact_root, expected)
+
+
+@pytest.mark.parametrize(
+    ("field", "invalid_value"),
+    [
+        ("data_version", "DATA-SyNtHeTiC-20260803"),
+        ("model_version", "SPORTSCORE-historical-20260803"),
+        ("sportshare_model_id", "SPORTSHARE-mock-20260803"),
+        ("official_total_id", "SC-fallback-2022"),
+    ],
+)
+def test_rejects_misleading_formal_identifiers_with_recomputed_hashes(
+    tmp_path, field, invalid_value
+):
+    from tests.golden.formal_contract import validate_formal_artifact
+
+    expected = json.loads(EXPECTED_PATH.read_text(encoding="utf-8"))
+    artifact_root = _build_valid_artifact(tmp_path / expected["batch_number"], expected)
+    metadata = _read_json(artifact_root, "batch_metadata.json")
+    metadata[field] = invalid_value
+    _write_json(artifact_root, "batch_metadata.json", metadata)
+    _refresh_sha256sums(artifact_root)
+
+    with pytest.raises(AssertionError, match=field):
+        validate_formal_artifact(artifact_root, expected)
+
+
+@pytest.mark.parametrize(
+    "invalid_source_mode",
+    ["demo", "test", "LeGaCy", "historical", "synthetic", "MoCk", "fallback", "FoRmAl"],
+)
+def test_source_mode_is_case_sensitive_exact_formal(tmp_path, invalid_source_mode):
+    from tests.golden.formal_contract import validate_formal_artifact
+
+    expected = json.loads(EXPECTED_PATH.read_text(encoding="utf-8"))
+    artifact_root = _build_valid_artifact(tmp_path / expected["batch_number"], expected)
+    manifest = _read_json(artifact_root, "input_manifest.json")
+    manifest["source_mode"] = invalid_source_mode
+    _write_json(artifact_root, "input_manifest.json", manifest)
+    _refresh_sha256sums(artifact_root)
+
+    with pytest.raises(AssertionError, match="source_mode"):
+        validate_formal_artifact(artifact_root, expected)
+
+
+@pytest.mark.parametrize(
+    ("field", "invalid_value"),
+    [
+        ("start_time", "not-an-iso-timestamp"),
+        ("start_time", "2026-08-03T11:00:00"),
+        ("end_time", "2026-08-03 12:00:00"),
+        ("locked_at", "2026-08-03"),
+    ],
+)
+def test_rejects_invalid_or_timezone_naive_lock_timestamps(tmp_path, field, invalid_value):
+    from tests.golden.formal_contract import validate_formal_artifact
+
+    expected = json.loads(EXPECTED_PATH.read_text(encoding="utf-8"))
+    artifact_root = _build_valid_artifact(tmp_path / expected["batch_number"], expected)
+    metadata = _read_json(artifact_root, "batch_metadata.json")
+    metadata[field] = invalid_value
+    _write_json(artifact_root, "batch_metadata.json", metadata)
+    _refresh_sha256sums(artifact_root)
+
+    with pytest.raises(AssertionError, match=field):
+        validate_formal_artifact(artifact_root, expected)
+
+
+@pytest.mark.parametrize("ordering_case", ["start-after-end", "end-after-lock"])
+def test_rejects_unordered_lock_timestamps(tmp_path, ordering_case):
+    from tests.golden.formal_contract import validate_formal_artifact
+
+    expected = json.loads(EXPECTED_PATH.read_text(encoding="utf-8"))
+    artifact_root = _build_valid_artifact(tmp_path / expected["batch_number"], expected)
+    metadata = _read_json(artifact_root, "batch_metadata.json")
+    if ordering_case == "start-after-end":
+        metadata["start_time"] = "2026-08-03T13:00:00+08:00"
+    else:
+        metadata["locked_at"] = "2026-08-03T11:30:00+08:00"
+    _write_json(artifact_root, "batch_metadata.json", metadata)
+    _refresh_sha256sums(artifact_root)
+
+    with pytest.raises(AssertionError, match="timestamp order"):
+        validate_formal_artifact(artifact_root, expected)
+
+
+@pytest.mark.parametrize("invalid_runtime", [True, ["python"], "{}", 1])
+def test_runtime_environment_must_be_a_nonempty_object(tmp_path, invalid_runtime):
+    from tests.golden.formal_contract import validate_formal_artifact
+
+    expected = json.loads(EXPECTED_PATH.read_text(encoding="utf-8"))
+    artifact_root = _build_valid_artifact(tmp_path / expected["batch_number"], expected)
+    metadata = _read_json(artifact_root, "batch_metadata.json")
+    metadata["runtime_env_json"] = invalid_runtime
+    _write_json(artifact_root, "batch_metadata.json", metadata)
+    _refresh_sha256sums(artifact_root)
+
+    with pytest.raises(AssertionError, match="runtime_env_json"):
+        validate_formal_artifact(artifact_root, expected)
+
+
+def test_rejects_wrong_mapped_region_row_count_with_same_total(tmp_path):
+    from tests.golden.formal_contract import validate_formal_artifact
+
+    expected = json.loads(EXPECTED_PATH.read_text(encoding="utf-8"))
+    artifact_root = _build_valid_artifact(tmp_path / expected["batch_number"], expected)
+    rows = _read_csv(artifact_root, "scale/region_scale.csv")
+    removed = rows.pop()
+    rows[-1]["scale_100m_cny"] = str(
+        float(rows[-1]["scale_100m_cny"]) + float(removed["scale_100m_cny"])
+    )
+    rows[-1]["share"] = str(float(rows[-1]["share"]) + float(removed["share"]))
+    _write_csv(artifact_root, "scale/region_scale.csv", rows)
+    _refresh_sha256sums(artifact_root)
+
+    with pytest.raises(AssertionError, match="21 mapped"):
+        validate_formal_artifact(artifact_root, expected)
+
+
+def test_rejects_wrong_region_top_five_share_with_same_total(tmp_path):
+    from tests.golden.formal_contract import validate_formal_artifact
+
+    expected = json.loads(EXPECTED_PATH.read_text(encoding="utf-8"))
+    artifact_root = _build_valid_artifact(tmp_path / expected["batch_number"], expected)
+    rows = _read_csv(artifact_root, "scale/region_scale.csv")
+    rows[1]["scale_100m_cny"] = str(float(rows[1]["scale_100m_cny"]) + 1.0)
+    rows[5]["scale_100m_cny"] = str(float(rows[5]["scale_100m_cny"]) - 1.0)
+    _write_csv(artifact_root, "scale/region_scale.csv", rows)
+    _refresh_sha256sums(artifact_root)
+
+    with pytest.raises(AssertionError, match="top-five"):
+        validate_formal_artifact(artifact_root, expected)
+
+
+def test_unresolved_region_rows_use_the_documented_sentinel(tmp_path):
+    from tests.golden.formal_contract import validate_formal_artifact
+
+    expected = json.loads(EXPECTED_PATH.read_text(encoding="utf-8"))
+    artifact_root = _build_valid_artifact(tmp_path / expected["batch_number"], expected)
+    rows = _read_csv(artifact_root, "scale/region_scale.csv")
+    rows[-1]["mapping_status"] = "unresolved"
+    _write_csv(artifact_root, "scale/region_scale.csv", rows)
+    _refresh_sha256sums(artifact_root)
+
+    with pytest.raises(AssertionError, match="__UNRESOLVED__"):
+        validate_formal_artifact(artifact_root, expected)
+
+
+def test_region_keys_must_be_exact_without_padding(tmp_path):
+    from tests.golden.formal_contract import validate_formal_artifact
+
+    expected = json.loads(EXPECTED_PATH.read_text(encoding="utf-8"))
+    artifact_root = _build_valid_artifact(tmp_path / expected["batch_number"], expected)
+    rows = _read_csv(artifact_root, "scale/region_scale.csv")
+    rows[-1]["region"] += " "
+    _write_csv(artifact_root, "scale/region_scale.csv", rows)
+    _refresh_sha256sums(artifact_root)
+
+    with pytest.raises(AssertionError, match="exact region"):
+        validate_formal_artifact(artifact_root, expected)
+
+
+@pytest.mark.parametrize("mutation", ["profile", "alpha", "scenario-id"])
+def test_scenarios_require_exact_grid_and_deterministic_ids(tmp_path, mutation):
+    from tests.golden.formal_contract import validate_formal_artifact
+
+    expected = json.loads(EXPECTED_PATH.read_text(encoding="utf-8"))
+    artifact_root = _build_valid_artifact(tmp_path / expected["batch_number"], expected)
+    rows = _read_csv(artifact_root, "scale/scenarios.csv")
+    row = next(
+        item
+        for item in rows
+        if item["evidence_profile"] == "conservative" and float(item["alpha"]) == 0.10
+    )
+    if mutation == "profile":
+        row["evidence_profile"] = "balanced"
+        row["scenario_id"] = "balanced-alpha-0.10"
+    elif mutation == "alpha":
+        row["alpha"] = "0.15"
+        row["scenario_id"] = "conservative-alpha-0.15"
+    else:
+        row["scenario_id"] = "SCENARIO-OPAQUE-01"
+    _write_csv(artifact_root, "scale/scenarios.csv", rows)
+    _refresh_sha256sums(artifact_root)
+
+    with pytest.raises(AssertionError, match="scenarios"):
+        validate_formal_artifact(artifact_root, expected)
+
+
+def test_duplicate_json_keys_are_rejected_from_raw_file(tmp_path):
+    from tests.golden.formal_contract import validate_formal_artifact
+
+    expected = json.loads(EXPECTED_PATH.read_text(encoding="utf-8"))
+    artifact_root = _build_valid_artifact(tmp_path / expected["batch_number"], expected)
+    path = artifact_root / "batch_metadata.json"
+    raw = path.read_text(encoding="utf-8")
+    raw = raw.replace('  "mode": "formal",', '  "mode": "formal",\n  "mode": "formal",', 1)
+    path.write_text(raw, encoding="utf-8")
+    _refresh_sha256sums(artifact_root)
+
+    with pytest.raises(AssertionError, match="duplicate JSON key"):
+        validate_formal_artifact(artifact_root, expected)
+
+
+@pytest.mark.parametrize("mutation", ["duplicate", "missing", "extra"])
+def test_scenario_csv_rejects_ambiguous_raw_headers(tmp_path, mutation):
+    from tests.golden.formal_contract import validate_formal_artifact
+
+    expected = json.loads(EXPECTED_PATH.read_text(encoding="utf-8"))
+    artifact_root = _build_valid_artifact(tmp_path / expected["batch_number"], expected)
+    path = artifact_root / "scale/scenarios.csv"
+    with path.open(encoding="utf-8", newline="") as stream:
+        matrix = list(csv.reader(stream))
+    if mutation == "duplicate":
+        matrix[0].append("scenario_id")
+        for row in matrix[1:]:
+            row.append(row[0])
+    elif mutation == "extra":
+        matrix[0].append("unexpected")
+        for row in matrix[1:]:
+            row.append("ignored")
+    else:
+        index = matrix[0].index("boundary_in_100m_cny")
+        for row in matrix:
+            row.pop(index)
+    with path.open("w", encoding="utf-8", newline="") as stream:
+        csv.writer(stream).writerows(matrix)
+    _refresh_sha256sums(artifact_root)
+
+    with pytest.raises(AssertionError, match="header"):
+        validate_formal_artifact(artifact_root, expected)
+
+
+@pytest.mark.parametrize(
+    "missing_field", ["check_id", "name", "status", "expected", "actual", "detail"]
+)
+def test_every_audit_record_requires_all_contract_fields(tmp_path, missing_field):
+    from tests.golden.formal_contract import validate_formal_artifact
+
+    expected = json.loads(EXPECTED_PATH.read_text(encoding="utf-8"))
+    artifact_root = _build_valid_artifact(tmp_path / expected["batch_number"], expected)
+    audit = _read_json(artifact_root, "audit/audit_checks.json")
+    audit["checks"][0].pop(missing_field)
+    _write_json(artifact_root, "audit/audit_checks.json", audit)
+    _refresh_sha256sums(artifact_root)
+
+    with pytest.raises(AssertionError, match=missing_field):
+        validate_formal_artifact(artifact_root, expected)
+
+
+@pytest.mark.parametrize(
+    ("field", "invalid_value"),
+    [
+        ("check_id", True),
+        ("name", True),
+        ("name", ""),
+        ("status", 1),
+        ("detail", 1),
+        ("detail", " "),
+        ("expected", {"value": True}),
+        ("actual", [True]),
+    ],
+)
+def test_audit_record_fields_have_sensible_types(tmp_path, field, invalid_value):
+    from tests.golden.formal_contract import validate_formal_artifact
+
+    expected = json.loads(EXPECTED_PATH.read_text(encoding="utf-8"))
+    artifact_root = _build_valid_artifact(tmp_path / expected["batch_number"], expected)
+    audit = _read_json(artifact_root, "audit/audit_checks.json")
+    audit["checks"][0][field] = invalid_value
+    _write_json(artifact_root, "audit/audit_checks.json", audit)
+    _refresh_sha256sums(artifact_root)
+
+    with pytest.raises(AssertionError, match=field):
+        validate_formal_artifact(artifact_root, expected)
+
+
+def test_audit_records_require_24_unique_ids(tmp_path):
+    from tests.golden.formal_contract import validate_formal_artifact
+
+    expected = json.loads(EXPECTED_PATH.read_text(encoding="utf-8"))
+    artifact_root = _build_valid_artifact(tmp_path / expected["batch_number"], expected)
+    audit = _read_json(artifact_root, "audit/audit_checks.json")
+    audit["checks"][1]["check_id"] = audit["checks"][0]["check_id"]
+    _write_json(artifact_root, "audit/audit_checks.json", audit)
+    _refresh_sha256sums(artifact_root)
+
+    with pytest.raises(AssertionError, match="unique IDs"):
+        validate_formal_artifact(artifact_root, expected)
+
+
+def test_each_of_the_24_audit_records_must_pass(tmp_path):
+    from tests.golden.formal_contract import validate_formal_artifact
+
+    expected = json.loads(EXPECTED_PATH.read_text(encoding="utf-8"))
+    artifact_root = _build_valid_artifact(tmp_path / expected["batch_number"], expected)
+    audit = _read_json(artifact_root, "audit/audit_checks.json")
+    audit["checks"][0]["status"] = "FAIL"
+    _write_json(artifact_root, "audit/audit_checks.json", audit)
+    _refresh_sha256sums(artifact_root)
+
+    with pytest.raises(AssertionError, match="must PASS"):
         validate_formal_artifact(artifact_root, expected)
