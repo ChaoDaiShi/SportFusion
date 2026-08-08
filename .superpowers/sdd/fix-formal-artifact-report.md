@@ -301,8 +301,10 @@ Formal real-artifact command:
 .\.venv\Scripts\python.exe -m pytest tests\golden\test_formal_artifact.py -m formal_artifact -q -rs --basetemp=.pytest-tmp-formal-ambiguity-formal
 ```
 
-Result: `2 skipped`; both skip reasons list all 14 required formal files, including
-`SHA256SUMS`. No real formal artifact was created.
+Result at this historical checkpoint: `2 skipped`; both skip reasons listed the 14
+files required by that interim contract, including `SHA256SUMS`. The final Phase 0
+contract supersedes this checkpoint and requires all 20 source-specified files. No
+real formal artifact was created.
 
 Ruff command:
 
