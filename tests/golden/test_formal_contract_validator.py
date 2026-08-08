@@ -49,7 +49,7 @@ def _synthetic_region_rows(scale: dict) -> list[dict[str, object]]:
     ]
     return [
         {
-            "region": "成都市" if index == 1 else f"SYNTHETIC-REGION-{index:02d}",
+            "region": "成都市" if index == 1 else f"CONTRACT-REGION-{index:02d}",
             "scale_100m_cny": value,
             "share": scale["chengdu_share"] if index == 1 else value / total,
             "mapping_status": "mapped",
@@ -61,10 +61,26 @@ def _synthetic_region_rows(scale: dict) -> list[dict[str, object]]:
 def _synthetic_category_metrics(expected: dict) -> dict:
     categories = list(expected["scale"]["category_scale_100m_cny"])
     confusion = {actual: {predicted: 0 for predicted in categories} for actual in categories}
-    diagonal = [13, 23, 23, 23, 22, 22, 22, 22, 1]
+    diagonal = [21, 95, 17, 8, 5, 4, 9, 4, 8]
     for actual, correct in zip(categories, diagonal, strict=True):
         confusion[actual][actual] = correct
-    confusion[categories[-1]][categories[0]] = 13
+    off_diagonal = (
+        (0, 3),
+        (0, 8),
+        (1, 0),
+        (1, 8),
+        (2, 3),
+        (2, 6),
+        (2, 7),
+        (3, 1),
+        (4, 1),
+        (4, 3),
+        (4, 5),
+        (7, 4),
+        (8, 0),
+    )
+    for actual_index, predicted_index in off_diagonal:
+        confusion[categories[actual_index]][categories[predicted_index]] += 1
 
     per_class = {}
     for category in categories:
@@ -119,6 +135,26 @@ def _synthetic_baseline_rows() -> list[dict[str, object]]:
     return rows
 
 
+def _threshold_row(
+    threshold: float,
+    candidate_count: int,
+    false_negative: int,
+    false_positive: int,
+) -> dict[str, object]:
+    true_positive = 190 - false_negative
+    precision = true_positive / (true_positive + false_positive)
+    recall = true_positive / 190
+    return {
+        "threshold": threshold,
+        "candidate_count": candidate_count,
+        "precision": precision,
+        "recall": recall,
+        "f1": 2 * precision * recall / (precision + recall),
+        "false_negative": false_negative,
+        "false_positive": false_positive,
+    }
+
+
 def _build_valid_artifact(root: Path, expected: dict) -> Path:
     root.mkdir(parents=True)
     batch_number = expected["batch_number"]
@@ -149,7 +185,7 @@ def _build_valid_artifact(root: Path, expected: dict) -> Path:
             "input_file_sha256": input_digest,
             "start_time": "2026-08-03T11:00:00+08:00",
             "end_time": "2026-08-03T12:00:00+08:00",
-            "runtime_env_json": {"runtime_id": "synthetic-offline-test"},
+            "runtime_env_json": {"runtime_id": "contract-fixture-runtime"},
             "status": "formal-completed",
             "locked_at": "2026-08-03T12:00:00+08:00",
         },
@@ -178,7 +214,7 @@ def _build_valid_artifact(root: Path, expected: dict) -> Path:
     )
     _write_json(root, "recognition/evidence_group_summary.json", expected["evidence_groups"])
     (root / "recognition" / "enterprise_boundaries.parquet").write_bytes(
-        b"synthetic parquet contract placeholder\n"
+        b"PAR1contract fixturePAR1"
     )
     _write_json(
         root,
@@ -189,7 +225,7 @@ def _build_valid_artifact(root: Path, expected: dict) -> Path:
         },
     )
     (root / "sportshare" / "sportshare_results.parquet").write_bytes(
-        b"synthetic parquet contract placeholder\n"
+        b"PAR1contract fixturePAR1"
     )
     _write_csv(
         root,
@@ -260,21 +296,10 @@ def _build_valid_artifact(root: Path, expected: dict) -> Path:
         root,
         "validation/threshold_sweep.csv",
         [
-            {
-                "threshold": threshold,
-                "candidate_count": 8950 if threshold == 0.10 else candidate_count,
-                "precision": precision,
-                "recall": recall,
-                "f1": f1,
-                "false_negative": false_negative,
-                "false_positive": false_positive,
-            }
-            for threshold, candidate_count, precision, recall, f1, false_negative, false_positive in (
-                (0.05, 9200, 0.94, 0.995, 0.9664, 1, 13),
-                (0.10, 8950, 0.9403, 0.9947, 0.9668, 1, 12),
-                (0.15, 8700, 0.95, 0.98, 0.9648, 4, 10),
-                (0.20, 8400, 0.96, 0.96, 0.96, 8, 8),
-            )
+            _threshold_row(0.05, 9200, 1, 12),
+            _threshold_row(0.10, 8950, 1, 12),
+            _threshold_row(0.15, 8700, 4, 10),
+            _threshold_row(0.20, 8400, 8, 8),
         ],
     )
     _write_csv(
@@ -305,11 +330,15 @@ def _build_valid_artifact(root: Path, expected: dict) -> Path:
             "checks": [
                 {
                     "check_id": f"AUD-{index:02d}",
-                    "name": f"synthetic_check_{index:02d}",
+                    "name": (
+                        "candidate_count_consistency"
+                        if index == 1
+                        else f"contract_check_{index:02d}"
+                    ),
                     "status": "PASS",
-                    "expected": True,
-                    "actual": True,
-                    "detail": "synthetic contract fixture",
+                    "expected": 8950 if index == 1 else True,
+                    "actual": 8950 if index == 1 else True,
+                    "detail": "contract fixture invariant",
                 }
                 for index in range(1, 25)
             ],
@@ -327,12 +356,15 @@ def _build_valid_artifact(root: Path, expected: dict) -> Path:
             "std_seconds": None,
             "throughput_records_per_second": None,
             "raw_logs": [],
+            "runtime_environment": {
+                "cpu": None,
+                "os": None,
+                "python": None,
+                "dependency_lock_sha256": None,
+            },
         },
     )
 
-    extra = root / "audit" / "raw" / "runtime.txt"
-    extra.parent.mkdir(parents=True)
-    extra.write_text("synthetic runtime evidence\n", encoding="utf-8")
     _refresh_sha256sums(root)
     return root
 
@@ -653,18 +685,7 @@ def test_benchmark_accepts_a_complete_measured_state(tmp_path):
 
     expected = json.loads(EXPECTED_PATH.read_text(encoding="utf-8"))
     artifact_root = _build_valid_artifact(tmp_path / expected["batch_number"], expected)
-    payload = _read_json(artifact_root, "audit/benchmark.json")
-    payload.update(
-        {
-            "status": "measured",
-            "peak_memory_mb": 1,
-            "median_seconds": 1,
-            "mean_seconds": 1,
-            "std_seconds": 0,
-            "throughput_records_per_second": 1,
-            "raw_logs": ["synthetic measured-state contract test"],
-        }
-    )
+    payload = _set_complete_measured_benchmark(artifact_root)
     _write_json(artifact_root, "audit/benchmark.json", payload)
     _refresh_sha256sums(artifact_root)
 
@@ -1460,3 +1481,258 @@ def test_each_of_the_24_audit_records_must_pass(tmp_path):
 
     with pytest.raises(AssertionError, match="must PASS"):
         validate_formal_artifact(artifact_root, expected)
+
+
+@pytest.mark.parametrize(
+    "mutation",
+    ["precision", "recall", "f1", "candidate_count", "false_positive", "false_negative"],
+)
+def test_threshold_rows_are_derived_and_monotone(tmp_path, mutation):
+    from tests.golden.formal_contract import validate_formal_artifact
+
+    expected = json.loads(EXPECTED_PATH.read_text(encoding="utf-8"))
+    artifact_root = _build_valid_artifact(tmp_path / expected["batch_number"], expected)
+    rows = _read_csv(artifact_root, "validation/threshold_sweep.csv")
+    target = next(row for row in rows if float(row["threshold"]) == 0.15)
+    if mutation in {"precision", "recall", "f1"}:
+        target[mutation] = "0.5"
+    elif mutation == "candidate_count":
+        target[mutation] = "9000"
+    elif mutation == "false_positive":
+        target.update(_threshold_row(0.15, 8700, 4, 13))
+    else:
+        target.update(_threshold_row(0.15, 8700, 0, 10))
+    _write_csv(artifact_root, "validation/threshold_sweep.csv", rows)
+    _refresh_sha256sums(artifact_root)
+
+    with pytest.raises(AssertionError, match="threshold sweep"):
+        validate_formal_artifact(artifact_root, expected)
+
+
+def test_baseline_rejects_self_consistent_wrong_class_supports(tmp_path):
+    from tests.golden.formal_contract import validate_formal_artifact
+
+    expected = json.loads(EXPECTED_PATH.read_text(encoding="utf-8"))
+    artifact_root = _build_valid_artifact(tmp_path / expected["batch_number"], expected)
+    rows = _read_csv(artifact_root, "validation/baselines.csv")
+    row = next(item for item in rows if item["baseline_id"] == "keyword_only")
+    row.update(
+        {
+            "true_negative": 84,
+            "false_positive": 10,
+            "false_negative": 10,
+            "true_positive": 181,
+        }
+    )
+    sample_count = sum(
+        int(row[field])
+        for field in ("true_negative", "false_positive", "false_negative", "true_positive")
+    )
+    precision = int(row["true_positive"]) / (
+        int(row["true_positive"]) + int(row["false_positive"])
+    )
+    recall = int(row["true_positive"]) / (
+        int(row["true_positive"]) + int(row["false_negative"])
+    )
+    row.update(
+        {
+            "sample_count": sample_count,
+            "accuracy": (int(row["true_negative"]) + int(row["true_positive"]))
+            / sample_count,
+            "precision": precision,
+            "recall": recall,
+            "f1": 2 * precision * recall / (precision + recall),
+        }
+    )
+    _write_csv(artifact_root, "validation/baselines.csv", rows)
+    _refresh_sha256sums(artifact_root)
+
+    with pytest.raises(AssertionError, match="support"):
+        validate_formal_artifact(artifact_root, expected)
+
+
+def test_sportshare_feature_version_matches_batch_metadata(tmp_path):
+    from tests.golden.formal_contract import validate_formal_artifact
+
+    expected = json.loads(EXPECTED_PATH.read_text(encoding="utf-8"))
+    artifact_root = _build_valid_artifact(tmp_path / expected["batch_number"], expected)
+    payload = _read_json(artifact_root, "validation/sportshare_cv.json")
+    payload["feature_version"] = "FEATURE-OTHER-R1"
+    _write_json(artifact_root, "validation/sportshare_cv.json", payload)
+    _refresh_sha256sums(artifact_root)
+
+    with pytest.raises(AssertionError, match="feature_version"):
+        validate_formal_artifact(artifact_root, expected)
+
+
+def _set_complete_measured_benchmark(artifact_root: Path) -> dict:
+    payload = _read_json(artifact_root, "audit/benchmark.json")
+    raw_logs = [f"audit/raw/run-{index:02d}.log" for index in range(1, 6)]
+    for index, relative in enumerate(raw_logs, start=1):
+        path = artifact_root / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(f"benchmark run {index}\n", encoding="utf-8")
+    payload.update(
+        {
+            "status": "measured",
+            "peak_memory_mb": 1,
+            "median_seconds": 1,
+            "mean_seconds": 1,
+            "std_seconds": 0,
+            "throughput_records_per_second": 1,
+            "raw_logs": raw_logs,
+            "runtime_environment": {
+                "cpu": "contract fixture CPU",
+                "os": "contract fixture OS",
+                "python": "3.11.9",
+                "dependency_lock_sha256": "e" * 64,
+            },
+        }
+    )
+    return payload
+
+
+@pytest.mark.parametrize(
+    "mutation",
+    [
+        "missing-runtime-key",
+        "single-log",
+        "escaping-log",
+        "missing-log-file",
+        "empty-log-file",
+    ],
+)
+def test_measured_benchmark_requires_bound_environment_and_five_logs(tmp_path, mutation):
+    from tests.golden.formal_contract import validate_formal_artifact
+
+    expected = json.loads(EXPECTED_PATH.read_text(encoding="utf-8"))
+    artifact_root = _build_valid_artifact(tmp_path / expected["batch_number"], expected)
+    payload = _set_complete_measured_benchmark(artifact_root)
+    if mutation == "missing-runtime-key":
+        payload["runtime_environment"].pop("cpu")
+    elif mutation == "single-log":
+        payload["raw_logs"] = payload["raw_logs"][:1]
+    elif mutation == "escaping-log":
+        payload["raw_logs"][0] = "../outside.log"
+    elif mutation == "missing-log-file":
+        (artifact_root / payload["raw_logs"][-1]).unlink()
+    else:
+        (artifact_root / payload["raw_logs"][-1]).write_bytes(b"")
+    _write_json(artifact_root, "audit/benchmark.json", payload)
+    _refresh_sha256sums(artifact_root)
+
+    with pytest.raises(AssertionError, match="benchmark"):
+        validate_formal_artifact(artifact_root, expected)
+
+
+def test_measured_benchmark_accepts_bound_environment_and_five_logs(tmp_path):
+    from tests.golden.formal_contract import validate_formal_artifact
+
+    expected = json.loads(EXPECTED_PATH.read_text(encoding="utf-8"))
+    artifact_root = _build_valid_artifact(tmp_path / expected["batch_number"], expected)
+    payload = _set_complete_measured_benchmark(artifact_root)
+    _write_json(artifact_root, "audit/benchmark.json", payload)
+    _refresh_sha256sums(artifact_root)
+
+    validate_formal_artifact(artifact_root, expected)
+
+
+def test_contract_fixture_category_macro_f1_matches_four_decimal_lock(tmp_path):
+    expected = json.loads(EXPECTED_PATH.read_text(encoding="utf-8"))
+    artifact_root = _build_valid_artifact(tmp_path / expected["batch_number"], expected)
+    payload = _read_json(artifact_root, "validation/category_metrics.json")
+
+    derived = sum(item["f1"] for item in payload["per_class"].values()) / len(
+        payload["per_class"]
+    )
+
+    assert round(derived, 4) == expected["validation"]["category"]["macro_f1"]
+
+
+@pytest.mark.parametrize("mutation", ["id", "name", "expected-actual"])
+def test_audit_records_are_canonical_and_fail_closed(tmp_path, mutation):
+    from tests.golden.formal_contract import validate_formal_artifact
+
+    expected = json.loads(EXPECTED_PATH.read_text(encoding="utf-8"))
+    artifact_root = _build_valid_artifact(tmp_path / expected["batch_number"], expected)
+    audit = _read_json(artifact_root, "audit/audit_checks.json")
+    if mutation == "id":
+        audit["checks"][-1]["check_id"] = "AUD-25"
+    elif mutation == "name":
+        audit["checks"][0]["name"] = "candidate_count_changed"
+    else:
+        audit["checks"][1]["actual"] = False
+    _write_json(artifact_root, "audit/audit_checks.json", audit)
+    _refresh_sha256sums(artifact_root)
+
+    with pytest.raises(AssertionError, match="audit"):
+        validate_formal_artifact(artifact_root, expected)
+
+
+@pytest.mark.parametrize("mutation", ["single-byte", "bad-header", "bad-footer"])
+def test_required_parquet_files_require_header_and_footer_magic(tmp_path, mutation):
+    from tests.golden.formal_contract import validate_formal_artifact
+
+    expected = json.loads(EXPECTED_PATH.read_text(encoding="utf-8"))
+    artifact_root = _build_valid_artifact(tmp_path / expected["batch_number"], expected)
+    path = artifact_root / "recognition/enterprise_boundaries.parquet"
+    if mutation == "single-byte":
+        path.write_bytes(b"P")
+    elif mutation == "bad-header":
+        path.write_bytes(b"NOPEpayloadPAR1")
+    else:
+        path.write_bytes(b"PAR1payloadNOPE")
+    _refresh_sha256sums(artifact_root)
+
+    with pytest.raises(AssertionError, match="parquet"):
+        validate_formal_artifact(artifact_root, expected)
+
+
+@pytest.mark.parametrize(
+    "relative",
+    [
+        "validation/binary_metrics.json",
+        "validation/category_metrics.json",
+        "validation/sportshare_cv.json",
+    ],
+)
+def test_metric_json_top_level_keys_are_exact(tmp_path, relative):
+    from tests.golden.formal_contract import validate_formal_artifact
+
+    expected = json.loads(EXPECTED_PATH.read_text(encoding="utf-8"))
+    artifact_root = _build_valid_artifact(tmp_path / expected["batch_number"], expected)
+    payload = _read_json(artifact_root, relative)
+    payload["unexpected"] = "ignored-by-old-validator"
+    _write_json(artifact_root, relative, payload)
+    _refresh_sha256sums(artifact_root)
+
+    with pytest.raises(AssertionError, match="keys must be exactly"):
+        validate_formal_artifact(artifact_root, expected)
+
+
+@pytest.mark.parametrize("component", ["w1", "w2", "w4"])
+def test_each_approximately_locked_ablation_f1_is_enforced(tmp_path, component):
+    from tests.golden.formal_contract import validate_formal_artifact
+
+    expected = json.loads(EXPECTED_PATH.read_text(encoding="utf-8"))
+    artifact_root = _build_valid_artifact(tmp_path / expected["batch_number"], expected)
+    rows = _read_csv(artifact_root, "validation/ablation.csv")
+    next(row for row in rows if row["ablation_id"] == f"remove_{component}")["f1"] = "0.95"
+    _write_csv(artifact_root, "validation/ablation.csv", rows)
+    _refresh_sha256sums(artifact_root)
+
+    with pytest.raises(AssertionError, match="ablation"):
+        validate_formal_artifact(artifact_root, expected)
+
+
+def test_contract_fixture_values_do_not_claim_synthetic_provenance(tmp_path):
+    expected = json.loads(EXPECTED_PATH.read_text(encoding="utf-8"))
+    artifact_root = _build_valid_artifact(tmp_path / expected["batch_number"], expected)
+
+    values = b"\n".join(
+        path.read_bytes().lower()
+        for path in artifact_root.rglob("*")
+        if path.is_file() and path.name != "SHA256SUMS"
+    )
+
+    assert b"synthetic" not in values

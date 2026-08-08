@@ -16,12 +16,13 @@ the exact key ``__UNRESOLVED__`` and is excluded from the mapped-row/CR5 calcula
 ``review_priority`` distribution with only ``P1`` through ``P4``. Scenario alpha fields
 are raw canonical tokens ``0.00``, ``0.10``, ``0.20``, and ``0.30``; scenario IDs are the
 direct 3-by-4 set ``{evidence_profile}-alpha-{alpha_token}``. No aliases, duplicate JSON
-keys, duplicate CSV headers, or legacy layouts are inferred. Parquet artifacts are
-required to be non-empty and are bound by ``SHA256SUMS`` without interpreting their
-contents in Phase 0. ``audit/benchmark.json`` distinguishes an explicit
-``not_measured`` state (all new measurements null/empty, especially peak memory) from
-a complete finite non-negative ``measured`` result, so historical runtime cannot be
-silently presented as a newly executed benchmark.
+keys, duplicate CSV headers, or legacy layouts are inferred. Parquet artifacts require
+the ``PAR1`` header/footer magic and are bound by ``SHA256SUMS`` without interpreting
+their schema in Phase 0. ``audit/benchmark.json`` distinguishes an explicit
+``not_measured`` state (all new measurements and environment fields null/empty,
+especially peak memory) from a complete finite non-negative ``measured`` result bound
+to five raw logs and exact runtime metadata, so historical runtime cannot be silently
+presented as a newly executed benchmark.
 """
 
 import csv
@@ -314,9 +315,10 @@ def _validate_required_files(artifact_root: Path) -> None:
         "recognition/enterprise_boundaries.parquet",
         "sportshare/sportshare_results.parquet",
     ):
+        payload = (artifact_root / relative).read_bytes()
         _require(
-            (artifact_root / relative).stat().st_size > 0,
-            f"contract required parquet: {relative} must be non-empty",
+            len(payload) >= 8 and payload[:4] == b"PAR1" and payload[-4:] == b"PAR1",
+            f"contract required parquet: {relative} must be non-empty with PAR1 header and footer magic",
         )
 
 
@@ -707,6 +709,19 @@ def _validate_scale(root: Path, expected: dict) -> None:
 def _validate_binary_metrics(root: Path, validation: dict) -> None:
     area = "binary metrics"
     binary = _read_json(root, "validation/binary_metrics.json")
+    _exact_keys(
+        binary,
+        {
+            "accuracy",
+            "precision",
+            "recall",
+            "f1",
+            "binary_evaluable",
+            "reference_labels",
+            "confusion_matrix",
+        },
+        area,
+    )
     for field in ("accuracy", "precision", "recall", "f1"):
         _close(binary.get(field), validation["binary"][field], 1e-4, f"{area} {field}")
     _require(
@@ -784,6 +799,14 @@ def _validate_baselines(root: Path, validation: dict) -> None:
         tn = counts["true_negative"]
         fp = counts["false_positive"]
         fn = counts["false_negative"]
+        _require(
+            tp + fn == validation["reference_labels"]["sport"],
+            f"contract {area} {baseline_id}: positive-class support mismatch",
+        )
+        _require(
+            tn + fp == validation["reference_labels"]["non_sport"],
+            f"contract {area} {baseline_id}: negative-class support mismatch",
+        )
         precision = tp / (tp + fp) if tp + fp else 0.0
         recall = tp / (tp + fn) if tp + fn else 0.0
         calculated = {
@@ -818,6 +841,18 @@ def _validate_category_metrics(root: Path, expected: dict) -> None:
     area = "category metrics"
     validation = expected["validation"]
     category = _read_json(root, "validation/category_metrics.json")
+    _exact_keys(
+        category,
+        {
+            "accuracy",
+            "macro_f1",
+            "correct",
+            "category_evaluable",
+            "confusion_matrix",
+            "per_class",
+        },
+        area,
+    )
     for field in ("accuracy", "macro_f1"):
         _close(category.get(field), validation["category"][field], 1e-4, f"{area} {field}")
     _require(
@@ -879,7 +914,12 @@ def _validate_category_metrics(root: Path, expected: dict) -> None:
         f"contract {area}: per-class supports must sum to 184",
     )
     _close(category.get("accuracy"), diagonal / total, 1e-4, f"{area} accuracy consistency")
-    _close(category.get("macro_f1"), sum(derived_f1) / len(derived_f1), 1e-3, f"{area} macro-F1 consistency")
+    _close(
+        category.get("macro_f1"),
+        sum(derived_f1) / len(derived_f1),
+        1e-4,
+        f"{area} macro-F1 consistency",
+    )
 
 
 def _validate_ablation(root: Path, validation: dict) -> None:
@@ -909,15 +949,54 @@ def _validate_threshold_sweep(root: Path, validation: dict) -> None:
     area = "threshold sweep"
     rows = _read_csv(root, "validation/threshold_sweep.csv")
     keyed = {}
+    positive_support = validation["reference_labels"]["sport"]
+    negative_support = validation["reference_labels"]["non_sport"]
+    _require(
+        positive_support == 190 and negative_support == 95,
+        f"contract {area}: locked class supports must be 190 positive and 95 negative",
+    )
     for row in rows:
         threshold = _rate(row["threshold"], f"{area} threshold")
         _require(threshold not in keyed, f"contract {area}: duplicate threshold")
         keyed[threshold] = row
-        for field in ("precision", "recall", "f1"):
+        candidate_count = _integer(
+            row["candidate_count"], f"{area} {threshold:.2f} candidate_count"
+        )
+        false_negative = _integer(
+            row["false_negative"], f"{area} {threshold:.2f} false_negative"
+        )
+        false_positive = _integer(
+            row["false_positive"], f"{area} {threshold:.2f} false_positive"
+        )
+        _require(candidate_count >= 0, f"contract {area}: candidate_count must be non-negative")
+        _require(
+            0 <= false_negative <= positive_support,
+            f"contract {area}: false_negative exceeds positive support",
+        )
+        _require(
+            0 <= false_positive <= negative_support,
+            f"contract {area}: false_positive exceeds negative support",
+        )
+        true_positive = positive_support - false_negative
+        precision = (
+            true_positive / (true_positive + false_positive)
+            if true_positive + false_positive
+            else 0.0
+        )
+        recall = true_positive / positive_support
+        f1 = (
+            2 * precision * recall / (precision + recall)
+            if precision + recall
+            else 0.0
+        )
+        for field, derived in (("precision", precision), ("recall", recall), ("f1", f1)):
             _rate(row[field], f"{area} {threshold:.2f} {field}")
-        for field in ("candidate_count", "false_negative", "false_positive"):
-            value = _integer(row[field], f"{area} {threshold:.2f} {field}")
-            _require(value >= 0, f"contract {area}: {field} must be non-negative")
+            _close(
+                row[field],
+                derived,
+                1e-4,
+                f"{area} {threshold:.2f} {field} consistency",
+            )
     locked = validation["threshold_sweep"]
     required = set(locked["required_thresholds"])
     _require(required <= set(keyed), f"contract {area}: missing required thresholds")
@@ -930,17 +1009,49 @@ def _validate_threshold_sweep(root: Path, validation: dict) -> None:
     end_f1 = keyed[locked["plateau_end"]]["f1"]
     _close(start_f1, end_f1, locked["f1_plateau_tolerance"], f"{area} 0.05-0.10 F1 plateau")
 
+    ordered = sorted(keyed.items())
+    for (lower_threshold, lower), (higher_threshold, higher) in pairwise(ordered):
+        _require(
+            _integer(lower["candidate_count"], f"{area} {lower_threshold:.2f} candidate_count")
+            >= _integer(
+                higher["candidate_count"],
+                f"{area} {higher_threshold:.2f} candidate_count",
+            ),
+            f"contract {area}: candidate_count cannot increase as threshold rises",
+        )
+        _require(
+            _integer(lower["false_positive"], f"{area} {lower_threshold:.2f} false_positive")
+            >= _integer(
+                higher["false_positive"],
+                f"{area} {higher_threshold:.2f} false_positive",
+            ),
+            f"contract {area}: false_positive cannot increase as threshold rises",
+        )
+        _require(
+            _integer(lower["false_negative"], f"{area} {lower_threshold:.2f} false_negative")
+            <= _integer(
+                higher["false_negative"],
+                f"{area} {higher_threshold:.2f} false_negative",
+            ),
+            f"contract {area}: false_negative cannot decrease as threshold rises",
+        )
 
-def _validate_sportshare_cv(root: Path, validation: dict) -> None:
+
+def _validate_sportshare_cv(root: Path, validation: dict, metadata: dict) -> None:
     area = "sportshare CV"
     payload = _read_json(root, "validation/sportshare_cv.json")
     locked = validation["sportshare"]
+    _exact_keys(payload, set(locked) | {"feature_version", "q90_abs_error"}, area)
     for field in ("algorithm", "training_sample_count", "target"):
         _require(payload.get(field) == locked[field], f"contract {area}: {field} mismatch")
     feature_version = payload.get("feature_version")
     _require(
         isinstance(feature_version, str) and feature_version.strip(),
         f"contract {area}: feature_version must be non-empty",
+    )
+    _require(
+        feature_version == metadata["feature_version"],
+        f"contract {area}: feature_version must match batch_metadata.feature_version",
     )
     _require(payload.get("cv") == locked["cv"], f"contract {area}: CV protocol mismatch")
     _require(payload.get("interval") == locked["interval"], f"contract {area}: interval mismatch")
@@ -971,6 +1082,7 @@ def _validate_benchmark(root: Path, validation: dict) -> None:
         "std_seconds",
         "throughput_records_per_second",
         "raw_logs",
+        "runtime_environment",
     }
     _exact_keys(payload, keys, area)
     locked = validation["benchmark"]
@@ -991,38 +1103,72 @@ def _validate_benchmark(root: Path, validation: dict) -> None:
     )
     status = payload.get("status")
     _require(status in {"not_measured", "measured"}, f"contract {area}: invalid status")
+    runtime_environment = payload.get("runtime_environment")
+    _require(isinstance(runtime_environment, dict), f"contract {area}: runtime_environment required")
+    runtime_keys = {"cpu", "os", "python", "dependency_lock_sha256"}
+    _exact_keys(runtime_environment, runtime_keys, f"{area} runtime_environment")
     if status == "not_measured":
         _require(
             all(payload[field] is None for field in measurement_fields),
             f"contract {area}: not_measured numeric fields must be null",
         )
         _require(payload["raw_logs"] in (None, []), f"contract {area}: unmeasured raw_logs must be null/empty")
+        _require(
+            all(runtime_environment[field] is None for field in runtime_keys),
+            f"contract {area}: unmeasured runtime_environment fields must be null",
+        )
         return
     for field in measurement_fields:
         value = _number(payload[field], f"{area} measured {field}")
         _require(value >= 0.0, f"contract {area}: measured {field} must be non-negative")
     raw_logs = payload["raw_logs"]
+    for field in ("cpu", "os", "python"):
+        value = runtime_environment[field]
+        _require(
+            isinstance(value, str) and value.strip(),
+            f"contract {area}: measured runtime_environment.{field} must be non-empty",
+        )
+    dependency_lock = runtime_environment["dependency_lock_sha256"]
+    _require(
+        isinstance(dependency_lock, str) and _SHA256.fullmatch(dependency_lock) is not None,
+        f"contract {area}: measured dependency_lock_sha256 must be 64 hexadecimal characters",
+    )
     _require(
         isinstance(raw_logs, list)
-        and bool(raw_logs)
-        and all(isinstance(item, str) and item.strip() for item in raw_logs),
-        f"contract {area}: measured raw_logs must be a non-empty string list",
+        and len(raw_logs) == 5
+        and len(set(raw_logs)) == 5
+        and all(
+            isinstance(item, str)
+            and _safe_manifest_path(item)
+            and PurePosixPath(item).parts[:2] == ("audit", "raw")
+            for item in raw_logs
+        ),
+        f"contract {area}: measured raw_logs must be five unique safe relative paths",
     )
+    for relative in raw_logs:
+        path = root / relative
+        _require(
+            path.resolve().is_relative_to(root.resolve()),
+            f"contract {area}: raw log path escapes artifact root: {relative}",
+        )
+        _require(path.is_file(), f"contract {area}: raw log file missing: {relative}")
+        _require(path.stat().st_size > 0, f"contract {area}: raw log file empty: {relative}")
 
 
-def _validate_metrics(root: Path, expected: dict) -> None:
+def _validate_metrics(root: Path, expected: dict, metadata: dict) -> None:
     validation = expected["validation"]
     _validate_binary_metrics(root, validation)
     _validate_baselines(root, validation)
     _validate_category_metrics(root, expected)
     _validate_ablation(root, validation)
     _validate_threshold_sweep(root, validation)
-    _validate_sportshare_cv(root, validation)
+    _validate_sportshare_cv(root, validation, metadata)
     _validate_benchmark(root, validation)
 
 
 def _validate_audit(root: Path, expected: dict) -> None:
     audit = _read_json(root, "audit/audit_checks.json")
+    _exact_keys(audit, {"pass_count", "total", "checks"}, "audit")
     locked = expected["validation"]["audit"]
     _require(audit.get("pass_count") == locked["passed"] == 24, "audit contract: pass_count")
     _require(audit.get("total") == locked["total"] == 24, "audit contract: total")
@@ -1032,11 +1178,7 @@ def _validate_audit(root: Path, expected: dict) -> None:
     required_fields = {"check_id", "name", "status", "expected", "actual", "detail"}
     for index, check in enumerate(checks):
         _require(isinstance(check, dict), f"audit contract: check {index} must be an object")
-        missing_fields = required_fields - set(check)
-        _require(
-            not missing_fields,
-            f"audit contract: check {index} missing fields {sorted(missing_fields)!r}",
-        )
+        _exact_keys(check, required_fields, f"audit check {index}")
         check_id = check.get("check_id")
         _require(isinstance(check_id, str) and check_id.strip(), "audit contract: check_id required")
         identifiers.append(check_id)
@@ -1057,7 +1199,25 @@ def _validate_audit(root: Path, expected: dict) -> None:
                 and (not isinstance(value, float) or math.isfinite(value)),
                 f"audit contract: {check_id} {field} must be a finite JSON scalar",
             )
-    _require(len(set(identifiers)) == 24, "audit contract: checks must have unique IDs")
+        _require(
+            type(check["expected"]) is type(check["actual"])
+            and check["expected"] == check["actual"],
+            f"audit contract: {check_id} PASS expected and actual must be equal",
+        )
+    _require(
+        identifiers == [f"AUD-{index:02d}" for index in range(1, 25)],
+        "audit contract: unique IDs must be exactly AUD-01 through AUD-24 in order",
+    )
+    first = checks[0]
+    _require(
+        first["name"] == "candidate_count_consistency",
+        "audit contract: AUD-01 name must be candidate_count_consistency",
+    )
+    _require(
+        type(first["expected"]) is int
+        and first["expected"] == first["actual"] == 8950,
+        "audit contract: AUD-01 expected and actual must both be 8950",
+    )
 
 
 def validate_formal_artifact(artifact_root: Path, expected: dict) -> None:
@@ -1071,5 +1231,5 @@ def validate_formal_artifact(artifact_root: Path, expected: dict) -> None:
     _validate_recognition(artifact_root, expected)
     _validate_evidence_and_sportshare(artifact_root, expected)
     _validate_scale(artifact_root, expected)
-    _validate_metrics(artifact_root, expected)
+    _validate_metrics(artifact_root, expected, metadata)
     _validate_audit(artifact_root, expected)
