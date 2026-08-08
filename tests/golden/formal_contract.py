@@ -11,8 +11,11 @@ rows use ``category,scale_100m_cny``; region rows use
 ``boundary_out_100m_cny``. Region output has exactly 21 ``mapped`` rows. An unresolved
 aggregate is optional, but if present it is one ``mapping_status=unresolved`` row with
 the exact key ``__UNRESOLVED__`` and is excluded from the mapped-row/CR5 calculation.
-Scenario IDs are exactly ``{evidence_profile}-alpha-{alpha:.2f}``. No aliases, duplicate
-JSON keys, duplicate CSV headers, or legacy layouts are inferred.
+``recognition/recognition_summary.json`` nests the exact fixture-backed
+``review_priority`` distribution with only ``P1`` through ``P4``. Scenario alpha fields
+are raw canonical tokens ``0.00``, ``0.10``, ``0.20``, and ``0.30``; scenario IDs are the
+direct 3-by-4 set ``{evidence_profile}-alpha-{alpha_token}``. No aliases, duplicate JSON
+keys, duplicate CSV headers, or legacy layouts are inferred.
 """
 
 import csv
@@ -65,7 +68,12 @@ _CSV_HEADERS = {
     ),
 }
 _SCENARIO_PROFILES = ("conservative", "baseline", "expanded")
-_SCENARIO_ALPHAS = (0.0, 0.10, 0.20, 0.30)
+_SCENARIO_ALPHA_TOKENS = ("0.00", "0.10", "0.20", "0.30")
+_CANONICAL_SCENARIO_IDS = frozenset(
+    f"{profile}-alpha-{alpha_token}"
+    for profile in _SCENARIO_PROFILES
+    for alpha_token in _SCENARIO_ALPHA_TOKENS
+)
 
 
 class _DuplicateJsonKey(ValueError):
@@ -382,6 +390,15 @@ def _validate_recognition(root: Path, expected: dict) -> None:
                 recognition[field] == locked_value,
                 f"recognition contract: {field} differs from the locked value",
             )
+    review_priority = recognition.get("review_priority")
+    _require(
+        isinstance(review_priority, dict),
+        "recognition contract: missing review priority distribution",
+    )
+    _require(
+        review_priority == expected["review_priority"],
+        "recognition contract: review priority distribution must match exact fixture keys and counts",
+    )
 
 
 def _validate_evidence_and_sportshare(root: Path, expected: dict) -> None:
@@ -545,10 +562,14 @@ def _validate_scale(root: Path, expected: dict) -> None:
     )
 
     scenario_rows = _read_csv(root, "scale/scenarios.csv")
-    _key_rows(scenario_rows, "scenario_id", "scenarios")
+    scenario_ids = _key_rows(scenario_rows, "scenario_id", "scenarios")
     _require(
         len(scenario_rows) == scale["scenario_count"],
         "contract scenarios: expected exactly 12 rows",
+    )
+    _require(
+        set(scenario_ids) == _CANONICAL_SCENARIO_IDS,
+        "contract scenarios: scenario IDs must equal the canonical 3 x 4 ID set",
     )
     parameter_keys = set()
     boundary_out_values = []
@@ -559,15 +580,18 @@ def _validate_scale(root: Path, expected: dict) -> None:
             profile is not None and profile == profile.strip() and profile,
             "contract scenarios: evidence_profile must be exact",
         )
-        alpha = _number(row.get("alpha"), "scenarios alpha")
-        parameter_key = (profile, alpha)
+        alpha_token = row.get("alpha")
+        _require(
+            alpha_token in _SCENARIO_ALPHA_TOKENS,
+            "contract scenarios: alpha must use a canonical alpha token",
+        )
+        parameter_key = (profile, alpha_token)
         _require(parameter_key not in parameter_keys, "contract scenarios: duplicate parameter row")
         parameter_keys.add(parameter_key)
-        expected_scenario_id = f"{profile}-alpha-{alpha:.2f}"
+        expected_scenario_id = f"{profile}-alpha-{alpha_token}"
         _require(
             row.get("scenario_id") == expected_scenario_id,
-            "contract scenarios: scenario_id must bind evidence_profile and alpha as "
-            "{evidence_profile}-alpha-{alpha:.2f}",
+            "contract scenarios: scenario_id must bind evidence_profile and canonical alpha token",
         )
         scenario_total = _number(row.get("total_output_100m_cny"), "scenarios total")
         boundary_in = _number(row.get("boundary_in_100m_cny"), "scenarios boundary in")
@@ -575,14 +599,12 @@ def _validate_scale(root: Path, expected: dict) -> None:
         _close(scenario_total, total, 0.02, "scenarios official total")
         _close(boundary_in + boundary_out, total, 0.02, "scenarios boundary total")
         boundary_out_values.append(boundary_out)
-        if profile == "baseline" and math.isclose(
-            alpha, scale["baseline_alpha"], rel_tol=0.0, abs_tol=1e-9
-        ):
+        if profile == "baseline" and alpha_token == f"{scale['baseline_alpha']:.2f}":
             baseline_rows.append(row)
     expected_parameter_keys = {
-        (profile, alpha)
+        (profile, alpha_token)
         for profile in _SCENARIO_PROFILES
-        for alpha in _SCENARIO_ALPHAS
+        for alpha_token in _SCENARIO_ALPHA_TOKENS
     }
     _require(
         parameter_keys == expected_parameter_keys,

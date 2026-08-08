@@ -110,7 +110,11 @@ def _build_valid_artifact(root: Path, expected: dict) -> Path:
             ],
         },
     )
-    _write_json(root, "recognition/recognition_summary.json", expected["boundary"])
+    _write_json(
+        root,
+        "recognition/recognition_summary.json",
+        {**expected["boundary"], "review_priority": expected["review_priority"]},
+    )
     _write_json(root, "recognition/evidence_group_summary.json", expected["evidence_groups"])
     _write_json(
         root,
@@ -149,7 +153,7 @@ def _build_valid_artifact(root: Path, expected: dict) -> Path:
 
     scenario_rows = []
     for profile_index, profile in enumerate(("conservative", "baseline", "expanded")):
-        for alpha_index, alpha in enumerate((0.0, 0.10, 0.20, 0.30)):
+        for alpha_index, alpha_token in enumerate(("0.00", "0.10", "0.20", "0.30")):
             boundary_out = scale["boundary_out_100m_cny"]
             if profile_index == 0 and alpha_index == 0:
                 boundary_out = scale["boundary_out_scenario_min_100m_cny"]
@@ -157,9 +161,9 @@ def _build_valid_artifact(root: Path, expected: dict) -> Path:
                 boundary_out = scale["boundary_out_scenario_max_100m_cny"]
             scenario_rows.append(
                 {
-                    "scenario_id": f"{profile}-alpha-{alpha:.2f}",
+                    "scenario_id": f"{profile}-alpha-{alpha_token}",
                     "evidence_profile": profile,
-                    "alpha": alpha,
+                    "alpha": alpha_token,
                     "total_output_100m_cny": scale["official_total_100m_cny"],
                     "boundary_in_100m_cny": scale["official_total_100m_cny"] - boundary_out,
                     "boundary_out_100m_cny": boundary_out,
@@ -229,6 +233,40 @@ def test_valid_synthetic_artifact_passes(tmp_path):
     artifact_root = _build_valid_artifact(tmp_path / expected["batch_number"], expected)
 
     validate_formal_artifact(artifact_root, expected)
+
+
+def test_synthetic_artifact_contains_the_fixture_review_priority(tmp_path):
+    expected = json.loads(EXPECTED_PATH.read_text(encoding="utf-8"))
+    artifact_root = _build_valid_artifact(tmp_path / expected["batch_number"], expected)
+
+    recognition = _read_json(artifact_root, "recognition/recognition_summary.json")
+
+    assert recognition["review_priority"] == expected["review_priority"]
+
+
+@pytest.mark.parametrize("mutation", ["missing-group", "missing-key", "extra-key", "same-total"])
+def test_review_priority_requires_the_exact_fixture_distribution(tmp_path, mutation):
+    from tests.golden.formal_contract import validate_formal_artifact
+
+    expected = json.loads(EXPECTED_PATH.read_text(encoding="utf-8"))
+    artifact_root = _build_valid_artifact(tmp_path / expected["batch_number"], expected)
+    recognition = _read_json(artifact_root, "recognition/recognition_summary.json")
+    if mutation == "missing-group":
+        recognition.pop("review_priority")
+    else:
+        priority = recognition["review_priority"]
+        if mutation == "missing-key":
+            priority.pop("P4")
+        elif mutation == "extra-key":
+            priority["P5"] = 0
+        else:
+            priority["P1"] -= 1
+            priority["P2"] += 1
+    _write_json(artifact_root, "recognition/recognition_summary.json", recognition)
+    _refresh_sha256sums(artifact_root)
+
+    with pytest.raises(AssertionError, match="review priority"):
+        validate_formal_artifact(artifact_root, expected)
 
 
 def test_rejects_legacy_input_provenance_even_with_recomputed_hashes(tmp_path):
@@ -829,6 +867,43 @@ def test_scenarios_require_exact_grid_and_deterministic_ids(tmp_path, mutation):
     _refresh_sha256sums(artifact_root)
 
     with pytest.raises(AssertionError, match="scenarios"):
+        validate_formal_artifact(artifact_root, expected)
+
+
+@pytest.mark.parametrize(
+    ("canonical_alpha", "invalid_alpha"),
+    [
+        ("0.00", "0"),
+        ("0.00", "0.0"),
+        ("0.00", "-0.0"),
+        ("0.00", "-0.00"),
+        ("0.00", "0e0"),
+        ("0.00", "0e-999"),
+        ("0.00", "+0.00"),
+        ("0.10", "0.1"),
+        ("0.10", "0.100"),
+        ("0.10", "1e-1"),
+        ("0.10", "+0.10"),
+    ],
+)
+def test_scenarios_reject_noncanonical_raw_alpha_tokens(
+    tmp_path, canonical_alpha, invalid_alpha
+):
+    from tests.golden.formal_contract import validate_formal_artifact
+
+    expected = json.loads(EXPECTED_PATH.read_text(encoding="utf-8"))
+    artifact_root = _build_valid_artifact(tmp_path / expected["batch_number"], expected)
+    rows = _read_csv(artifact_root, "scale/scenarios.csv")
+    row = next(
+        item
+        for item in rows
+        if item["scenario_id"] == f"conservative-alpha-{canonical_alpha}"
+    )
+    row["alpha"] = invalid_alpha
+    _write_csv(artifact_root, "scale/scenarios.csv", rows)
+    _refresh_sha256sums(artifact_root)
+
+    with pytest.raises(AssertionError, match="canonical alpha token"):
         validate_formal_artifact(artifact_root, expected)
 
 

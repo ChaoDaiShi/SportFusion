@@ -75,6 +75,78 @@ Ruff command:
 
 Result: `All checks passed!`
 
+## Follow-up: review priorities and canonical scenario tokens
+
+This follow-up remains test/support-only. It does not create, modify, or claim any
+file below `artifacts/formal/`.
+
+`recognition/recognition_summary.json` is now the formal location of the nested
+`review_priority` distribution. It must match the fixture exactly, with only `P1`
+through `P4` and the locked counts. The synthetic valid artifact now contains that
+nested group. Rehashed adversarial tests reject a missing group, missing priority key,
+extra priority key, and a same-total redistribution.
+
+The scenario contract now declares the raw canonical alpha tokens `0.00`, `0.10`,
+`0.20`, and `0.30`, and directly compares the 12 canonical IDs formed by the three
+profiles and those tokens. Alternate text spellings are rejected before numeric
+interpretation, including negative zero, exponent and underflow spellings, leading
+pluses, and different decimal precision. The synthetic scenario writer emits the same
+canonical raw strings.
+
+### Test-first evidence
+
+Priority RED command:
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests\golden\test_formal_contract_validator.py -q --basetemp=.pytest-tmp-review-priority-red
+```
+
+Result: `5 failed, 130 passed`; the valid synthetic artifact and adversarial mutations
+showed the missing `review_priority` group.
+
+Scenario-token RED command:
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests\golden\test_formal_contract_validator.py -q -k noncanonical_raw --basetemp=.pytest-tmp-canonical-scenarios-red
+```
+
+Result: `11 failed, 135 deselected`; noncanonical raw alpha spellings were accepted or
+rejected only incidentally by the old formatted-ID rule.
+
+Final focused command:
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests\golden\test_formal_contract_validator.py -q --basetemp=.pytest-tmp-formal-priorities-green-final
+```
+
+Result: `146 passed`.
+
+Final full normal-CI command:
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests backend/tests -m "not formal_artifact" -q --basetemp=.pytest-tmp-formal-priorities-full-final
+```
+
+Result: `188 passed, 2 deselected, 1 xfailed, 7 warnings`. The existing strict xfail
+remains `P0-07`; warnings are existing Pydantic deprecations.
+
+Final formal-artifact command:
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests\golden\test_formal_artifact.py -m formal_artifact -q -rs --basetemp=.pytest-tmp-formal-priorities-formal-final
+```
+
+Result: `2 skipped` because the complete 14-file formal artifact is unavailable; no
+real artifact was created to change that outcome.
+
+Ruff command:
+
+```powershell
+.\.venv\Scripts\python.exe -m ruff check backend/core tests alembic
+```
+
+Result: `All checks passed!`
+
 ## Follow-up: regional-share and CSV-header closure
 
 This final follow-up remains test/support-only. No file under `artifacts/formal/`
