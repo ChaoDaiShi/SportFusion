@@ -75,6 +75,69 @@ Ruff command:
 
 Result: `All checks passed!`
 
+## Follow-up: regional-share and CSV-header closure
+
+This final follow-up remains test/support-only. No file under `artifacts/formal/`
+was created or changed.
+
+The validator now checks every region row, including any optional unresolved aggregate:
+`scale_100m_cny` is finite and non-negative; `share` is finite and within `[0, 1]`;
+and `share` equals `scale_100m_cny / official_total_100m_cny` to the existing
+`1e-4` share tolerance. The established official-total, Chengdu, 21-mapped-row, and
+top-five-share checks remain in place.
+
+All three CSV schemas now require their documented headers in exact order. Duplicate
+header diagnostics remain first, while missing and extra header diagnostics include
+their respective field lists before the order-specific diagnostic is evaluated.
+
+### Test-first evidence
+
+RED command:
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests\golden\test_formal_contract_validator.py -q --basetemp=.pytest-tmp-regional-header-red
+```
+
+Result: `8 failed, 122 passed`. The failures were five rehashed non-Chengdu row
+mutations (`share=999`, negative scale, negative share, share above one, and
+scale/share inconsistency) and rehashed header-order mutations for category, region,
+and scenario CSV files.
+
+Focused GREEN command:
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests\golden\test_formal_contract_validator.py -q --basetemp=.pytest-tmp-regional-header-green-2
+```
+
+Result: `130 passed`.
+
+Full non-formal command:
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest -m "not formal_artifact" -q --basetemp=.pytest-tmp-regional-header-full
+```
+
+Result: `172 passed, 2 deselected, 1 xfailed, 7 warnings`. The xfail remains the
+documented `P0-07` API compatibility case; the warnings are existing Pydantic
+deprecation warnings.
+
+Formal real-artifact command:
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests\golden\test_formal_artifact.py -m formal_artifact -q -rs --basetemp=.pytest-tmp-regional-header-formal
+```
+
+Result: `2 skipped`; both skips state that the complete 14-file formal artifact,
+including `SHA256SUMS`, is unavailable.
+
+Ruff command:
+
+```powershell
+.\.venv\Scripts\ruff.exe check backend\core tests alembic
+```
+
+Result: `All checks passed!`
+
 ## Minimal schema decisions
 
 - `batch_metadata.json` uses the Section 9.1 names directly. It requires formal mode,

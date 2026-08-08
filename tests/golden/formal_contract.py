@@ -155,9 +155,17 @@ def _read_csv(root: Path, relative: str) -> list[dict[str, str]]:
                 f"contract {relative}: duplicate CSV header",
             )
             expected_headers = _CSV_HEADERS[relative]
+            missing_headers = sorted(set(expected_headers) - set(headers))
+            extra_headers = sorted(set(headers) - set(expected_headers))
             _require(
                 set(headers) == set(expected_headers),
-                f"contract {relative}: header must contain exactly {expected_headers!r}",
+                f"contract {relative}: header must contain exactly {expected_headers!r}; "
+                f"missing={missing_headers!r}, extra={extra_headers!r}",
+            )
+            _require(
+                tuple(headers) == expected_headers,
+                f"contract {relative}: header must be exactly {expected_headers!r} "
+                "in documented order",
             )
             rows = list(reader)
     except (OSError, UnicodeError, csv.Error) as error:
@@ -457,6 +465,23 @@ def _validate_scale(root: Path, expected: dict) -> None:
     mapped_region_rows = []
     unresolved_region_rows = []
     for row in region_rows:
+        region = row["region"]
+        row_scale = _number(row.get("scale_100m_cny"), f"region scale {region} scale")
+        _require(
+            row_scale >= 0.0,
+            f"contract region scale {region}: scale must be non-negative",
+        )
+        row_share = _number(row.get("share"), f"region scale {region} share")
+        _require(
+            0.0 <= row_share <= 1.0,
+            f"contract region scale {region}: share must be within [0, 1]",
+        )
+        _close(
+            row_share,
+            row_scale / total,
+            1e-4,
+            f"region scale {region}: share must match scale / official total",
+        )
         mapping_status = row.get("mapping_status")
         if mapping_status == "mapped":
             _require(

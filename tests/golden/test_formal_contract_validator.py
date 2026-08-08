@@ -695,6 +695,9 @@ def test_rejects_wrong_region_top_five_share_with_same_total(tmp_path):
     rows = _read_csv(artifact_root, "scale/region_scale.csv")
     rows[1]["scale_100m_cny"] = str(float(rows[1]["scale_100m_cny"]) + 1.0)
     rows[5]["scale_100m_cny"] = str(float(rows[5]["scale_100m_cny"]) - 1.0)
+    total = expected["scale"]["official_total_100m_cny"]
+    for row in (rows[1], rows[5]):
+        row["share"] = str(float(row["scale_100m_cny"]) / total)
     _write_csv(artifact_root, "scale/region_scale.csv", rows)
     _refresh_sha256sums(artifact_root)
 
@@ -727,6 +730,78 @@ def test_region_keys_must_be_exact_without_padding(tmp_path):
     _refresh_sha256sums(artifact_root)
 
     with pytest.raises(AssertionError, match="exact region"):
+        validate_formal_artifact(artifact_root, expected)
+
+
+@pytest.mark.parametrize(
+    ("mutation", "expected_error"),
+    [
+        ("share-999", "share must be within"),
+        ("negative-scale", "scale must be non-negative"),
+        ("negative-share", "share must be within"),
+        ("share-over-one", "share must be within"),
+        ("inconsistent-share", "share must match scale"),
+    ],
+)
+def test_every_non_chengdu_region_row_requires_a_valid_consistent_share(
+    tmp_path, mutation, expected_error
+):
+    from tests.golden.formal_contract import validate_formal_artifact
+
+    expected = json.loads(EXPECTED_PATH.read_text(encoding="utf-8"))
+    artifact_root = _build_valid_artifact(tmp_path / expected["batch_number"], expected)
+    rows = _read_csv(artifact_root, "scale/region_scale.csv")
+    target = rows[-1]
+    total = expected["scale"]["official_total_100m_cny"]
+    if mutation == "share-999":
+        target["share"] = "999"
+    elif mutation == "negative-scale":
+        replacement = -1.0
+        donor = rows[-2]
+        donor["scale_100m_cny"] = str(
+            float(donor["scale_100m_cny"])
+            + float(target["scale_100m_cny"])
+            - replacement
+        )
+        donor["share"] = str(float(donor["scale_100m_cny"]) / total)
+        target["scale_100m_cny"] = str(replacement)
+        target["share"] = "0"
+    elif mutation == "negative-share":
+        target["share"] = "-0.01"
+    elif mutation == "share-over-one":
+        target["share"] = "1.01"
+    else:
+        target["share"] = "0"
+    _write_csv(artifact_root, "scale/region_scale.csv", rows)
+    _refresh_sha256sums(artifact_root)
+
+    with pytest.raises(AssertionError, match=expected_error):
+        validate_formal_artifact(artifact_root, expected)
+
+
+@pytest.mark.parametrize(
+    "relative",
+    [
+        "scale/category_scale.csv",
+        "scale/region_scale.csv",
+        "scale/scenarios.csv",
+    ],
+)
+def test_csv_headers_must_remain_in_the_documented_order(tmp_path, relative):
+    from tests.golden.formal_contract import validate_formal_artifact
+
+    expected = json.loads(EXPECTED_PATH.read_text(encoding="utf-8"))
+    artifact_root = _build_valid_artifact(tmp_path / expected["batch_number"], expected)
+    path = artifact_root / relative
+    with path.open(encoding="utf-8", newline="") as stream:
+        matrix = list(csv.reader(stream))
+    for row in matrix:
+        row[0], row[1] = row[1], row[0]
+    with path.open("w", encoding="utf-8", newline="") as stream:
+        csv.writer(stream).writerows(matrix)
+    _refresh_sha256sums(artifact_root)
+
+    with pytest.raises(AssertionError, match="header must be exactly"):
         validate_formal_artifact(artifact_root, expected)
 
 
