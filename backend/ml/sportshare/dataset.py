@@ -63,17 +63,12 @@ def build_training_samples(
         text = ent.get("business_text", ent.get("主要业务活动", ""))
         code = ent.get("industry_code", ent.get("行业代码"))
 
-        # Get sport_score from recognition if available
-        sport_score = 0.0
-        if recognition_results and i < len(recognition_results):
-            sport_score = recognition_results[i].get("sport_score", 0.0)
-
+        # sport_score is NOT used as a feature (indirect T_i leakage via W1)
         target = build_target(text)
 
         fv = build_sportshare_features(
             business_text=text,
             industry_code=code,
-            sport_score=sport_score,
         )
 
         sample = SportShareSample(
@@ -81,7 +76,7 @@ def build_training_samples(
             credit_code=ent.get("credit_code", ent.get("统一社会信用代码", "")),
             features=sportshare_features_to_array(fv),
             target=target,
-            sport_score=sport_score,
+            sport_score=0.0,  # metadata only, NOT a feature
             code_type=fv.code_type,
             sport_category=fv.primary_sport_category,
             total_lines=fv.business_line_count,

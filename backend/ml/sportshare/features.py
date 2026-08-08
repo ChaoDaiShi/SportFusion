@@ -1,13 +1,17 @@
 """
 SportShare feature builder — leakage-safe feature vector.
 
-CRITICAL: SportShareFeatureVector must NOT contain fields that directly
-reconstruct the target T_i = sport_business_lines / total_business_lines.
+CRITICAL: SportShareFeatureVector must NOT contain:
+    - w1_business_scope (direct T_i proxy)
+    - sport_score (indirect T_i proxy via W1 = 0.40 * sport_lines/total_lines)
+    - sport_business_lines / total_business_lines (target itself)
+    - Any field that directly or indirectly reconstructs T_i
 
-Explicitly excluded (leakage prevention):
-    - w1_business_scope (sport_lines / total_lines ≡ target proxy)
-    - sport_business_lines / total_business_lines ratio
-    - Any equivalent reconstruction of the structural target
+Allowed features (no leakage path to T_i):
+    - Keyword density / term stats (text signal, not line-ratio)
+    - Industry code weights (external prior)
+    - Category coverage (diversity, not ratio)
+    - Text/business-line counts (scale, not ratio)
 """
 
 from dataclasses import dataclass, field
@@ -15,6 +19,7 @@ from dataclasses import dataclass, field
 from domain.industry_code import normalize_industry_code
 from services.business_line_service import (
     classify_business_line,
+    get_category_for_word,
     get_sport_categories,
     match_sport_keywords,
     parse_business_lines,
@@ -28,11 +33,13 @@ class SportShareFeatureVector:
     """
     Leakage-safe feature vector for SportShare estimation.
 
-    Does NOT include w1_business_scope or any direct T_i reconstruction.
-    Derived from SportFeatureVector with explicit leakage removal.
+    Explicitly excluded (SportScore removed Phase 3 closure):
+        - w1_business_scope
+        - sport_score (contains 0.40*W1 → leaks T_i)
+        - sport_business_lines / total_business_lines
     """
 
-    # ---- 关键词特征 (no business-line ratio) ----
+    # ---- 关键词特征 ----
     w2_keyword_density: float = 0.0
     sport_term_count: int = 0
     token_count: int = 0
@@ -51,34 +58,42 @@ class SportShareFeatureVector:
     text_length: int = 0
     business_line_count: int = 0
 
-    # ---- 派生特征 ----
-    code_type: str = "none"
-    sport_score: float = 0.0  # SportScore as input (NOT as target)
+    # ---- 关键词原始密度 ----
     keyword_density_raw: float = 0.0
 
-    # ---- 业务线关键词分布 (不泄露比例) ----
+    # ---- 业务线关键词分布 ----
     sport_keywords_matched: list[str] = field(default_factory=list)
 
     # ---- 元数据 ----
     quality_flags: list[str] = field(default_factory=list)
 
 
+# Canonical feature names — must NOT contain w1_business_scope or sport_score
+FEATURE_NAMES = [
+    "w2_keyword_density",
+    "sport_term_count",
+    "token_count",
+    "w3_code_weight",
+    "direct_code_support",
+    "indirect_code_support",
+    "w4_category_coverage",
+    "category_count",
+    "text_length",
+    "business_line_count",
+    "keyword_density_raw",
+]
+
+
 def build_sportshare_features(
     business_text: str,
     industry_code: str | float | None = None,
-    sport_score: float = 0.0,
 ) -> SportShareFeatureVector:
     """
     Build leakage-safe SportShare feature vector.
 
-    Explicitly does NOT include w1_business_scope or any field
-    that directly encodes sport_business_lines / total_business_lines.
-
-    This ensures the RF model learns structural patterns,
-    not a trivial identity mapping to the target T_i.
+    Does NOT accept or use sport_score — removed for indirect T_i leakage.
     """
     fv = SportShareFeatureVector()
-    fv.sport_score = sport_score
 
     # ---- Text normalization ----
     text = normalize_text(business_text) if business_text else ""
@@ -111,13 +126,11 @@ def build_sportshare_features(
         fv.indirect_code_support = fv.code_type == "indirect"
         fv.w3_code_weight = 0.85 if fv.direct_code_support else (0.30 if fv.indirect_code_support else 0.0)
     else:
-        fv.code_type = "none"
         fv.w3_code_weight = 0.0
 
     # ---- Category coverage ----
-    sport_cats = set()
+    sport_cats: set[str] = set()
     for kw in keywords:
-        from services.business_line_service import get_category_for_word
         cat = get_category_for_word(kw)
         if cat:
             sport_cats.add(cat)
@@ -142,7 +155,7 @@ def sportshare_features_to_array(fv: SportShareFeatureVector) -> list[float]:
     """
     Convert SportShareFeatureVector to a fixed-order float array for RF input.
 
-    Feature order (deterministic):
+    Feature order (deterministic, 11 features, NO sport_score):
         0: w2_keyword_density
         1: sport_term_count
         2: token_count
@@ -153,8 +166,7 @@ def sportshare_features_to_array(fv: SportShareFeatureVector) -> list[float]:
         7: category_count
         8: text_length
         9: business_line_count
-        10: sport_score
-        11: keyword_density_raw
+        10: keyword_density_raw
     """
     return [
         fv.w2_keyword_density,
@@ -167,22 +179,5 @@ def sportshare_features_to_array(fv: SportShareFeatureVector) -> list[float]:
         float(fv.category_count),
         float(fv.text_length),
         float(fv.business_line_count),
-        fv.sport_score,
         fv.keyword_density_raw,
     ]
-
-
-FEATURE_NAMES = [
-    "w2_keyword_density",
-    "sport_term_count",
-    "token_count",
-    "w3_code_weight",
-    "direct_code_support",
-    "indirect_code_support",
-    "w4_category_coverage",
-    "category_count",
-    "text_length",
-    "business_line_count",
-    "sport_score",
-    "keyword_density_raw",
-]

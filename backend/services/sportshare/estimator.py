@@ -159,7 +159,6 @@ def estimate_sport_share(
             fv = build_sportshare_features(
                 business_text=text,
                 industry_code=code,
-                sport_score=sport_score,
             )
             feat_array = sportshare_features_to_array(fv)
             pred = predict_single(model_artifact, feat_array)
@@ -179,7 +178,7 @@ def estimate_sport_share(
             estimate.effective_share = estimate.model_share
             estimate.metadata["model_version"] = model_artifact.model_version
             return estimate
-        except Exception:
+        except Exception:  # noqa: BLE001, S110 — model fallback is intentional
             pass  # Fall through to fallback on model failure
 
     # ---- Fallback path ----
@@ -217,11 +216,9 @@ def _is_model_eligible(
     # 必须至少有基本识别结果
     if recognition_result is None:
         return False
-    # 必须有有效 sport_score
+    # 必须有有效 sport_score 或 direct code
     sport_score = recognition_result.get("sport_score", 0.0)
-    if sport_score <= 0.0 and recognition_result.get("code_type") != "direct":
-        return False
-    return True
+    return not (sport_score <= 0.0 and recognition_result.get("code_type") != "direct")
 
 
 def batch_estimate(
