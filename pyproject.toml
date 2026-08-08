@@ -1,0 +1,46 @@
+[project]
+name = "sportfusion"
+version = "1.0.0"
+description = "SportFusion sports industry boundary recognition and structural estimation platform"
+requires-python = ">=3.11,<3.12"
+dependencies = [
+  "fastapi==0.115.6",
+  "uvicorn[standard]==0.34.0",
+  "sqlalchemy==2.0.36",
+  "pydantic==2.10.3",
+  "python-multipart==0.0.19",
+  "python-dotenv==1.0.1",
+  "cryptography==44.0.0",
+  "openpyxl==3.1.5",
+  "pandas==2.2.3",
+  "matplotlib>=3.8,<4",
+  "jieba==0.42.1",
+  "numpy==2.2.1",
+  "scikit-learn==1.6.0",
+  "aiofiles==24.1.0",
+  "openai>=1.0.0,<3",
+  "PyYAML>=6.0,<7",
+]
+
+[dependency-groups]
+dev = [
+  "alembic>=1.14,<2",
+  "httpx>=0.28,<1",
+  "pytest>=8.3,<9",
+  "pytest-asyncio>=0.24,<1",
+  "ruff>=0.9,<1",
+]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests", "backend/tests"]
+addopts = "-ra --strict-markers --import-mode=importlib"
+markers = [
+  "formal_artifact: requires a complete locked formal batch artifact",
+]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
