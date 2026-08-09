@@ -95,7 +95,7 @@
     <el-tabs v-model="activeTab" type="border-card">
       <!-- Tab 1: 任务池 -->
       <el-tab-pane label="任务池" name="pool">
-        <el-table :data="filteredTasks" stripe border size="small" max-height="500">
+        <el-table :data="filteredTasks" stripe border size="small" max-height="500" empty-text="暂无复核任务">
           <el-table-column type="selection" width="40" />
           <el-table-column prop="enterprise_name" label="企业名称" min-width="160" />
           <el-table-column prop="priority" label="优先级" width="70" align="center">
@@ -310,7 +310,7 @@
 </template>
 
 <script setup>
-import { ref, computed, reactive } from 'vue'
+import { ref, computed, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useReviewStore } from '../store/review'
 import { useDataStore } from '../store/data'
@@ -434,6 +434,8 @@ async function generateTasks() {
 async function loadTasks() {
   await reviewStore.fetchTasks({ page: 1, page_size: 100 })
 }
+
+onMounted(loadTasks)
 
 // 分配
 function openAssignDialog(task) {

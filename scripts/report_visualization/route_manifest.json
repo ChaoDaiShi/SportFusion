@@ -1,0 +1,56 @@
+[
+  {
+    "id": "a-monitoring",
+    "route": "/monitoring",
+    "title": "统计监测驾驶舱",
+    "focus": "批次口径、五步工作流与区域风险"
+  },
+  {
+    "id": "b-data",
+    "route": "/data",
+    "title": "企业数据治理",
+    "focus": "数据导入、清洗、解析与过程追踪"
+  },
+  {
+    "id": "c-recognition",
+    "route": "/recognition",
+    "title": "企业边界识别",
+    "focus": "文本—代码双通道证据与SportScore"
+  },
+  {
+    "id": "d-share",
+    "route": "/share",
+    "title": "经营比重测算",
+    "focus": "SportShare来源、区间与结构权重"
+  },
+  {
+    "id": "e-scale",
+    "route": "/scale",
+    "title": "产业规模测算",
+    "focus": "宏观总量校准、九类业态结构与正式口径边界"
+  },
+  {
+    "id": "f-evaluation",
+    "route": "/model-evaluation",
+    "title": "模型性能评估",
+    "focus": "可复算指标、验证边界与异常状态"
+  },
+  {
+    "id": "g-review",
+    "route": "/review",
+    "title": "人工复核工作台",
+    "focus": "P1—P4优先级、双人复核与仲裁"
+  },
+  {
+    "id": "h-directory",
+    "route": "/directory",
+    "title": "动态企业名录",
+    "focus": "finalized过滤、状态与证据追溯"
+  },
+  {
+    "id": "i-export",
+    "route": "/export",
+    "title": "报告与成果导出",
+    "focus": "批次锁定、版本信息与结构化输出"
+  }
+]

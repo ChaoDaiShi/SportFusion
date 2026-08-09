@@ -15,7 +15,7 @@
       </el-row>
     </el-card>
 
-    <el-table :data="entries" border stripe style="margin-top:16px" v-loading="loading">
+    <el-table :data="entries" border stripe style="margin-top:16px" v-loading="loading" empty-text="暂无已确认的名录数据">
       <el-table-column prop="enterprise_name" label="企业名称" min-width="150" />
       <el-table-column prop="region" label="区域" width="100" />
       <el-table-column label="SportScore" width="100"><template #default="{row}">{{ row.sport_score?.toFixed(3) }}</template></el-table-column>
