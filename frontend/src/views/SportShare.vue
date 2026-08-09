@@ -1,6 +1,13 @@
 <template>
   <div class="sport-share-page">
-    <h2 class="page-title">经营比重测算</h2>
+    <h2 class="page-title">经营比重测算 (SportShare)</h2>
+
+    <!-- artifact_required state -->
+    <el-alert v-if="artifactRequired" type="warning" :closable="false" show-icon style="margin-bottom:16px">
+      <template #title>正式 SportShare 模型产物尚未加载</template>
+      模型文件 (model.joblib) 缺失 — 无法进行模型估计。请先训练并部署 SportShare 模型产物。
+    </el-alert>
+    <el-alert v-if="shareError" type="error" :closable="false" show-icon style="margin-bottom:16px" :title="shareError" />
 
     <!-- 概览卡片 -->
     <el-row :gutter="16" style="margin-bottom:20px">
@@ -70,6 +77,13 @@
             <span :style="{ color: getShareColor(row.model_share), fontWeight: 'bold' }">
               {{ formatShare(row.model_share) }}
             </span>
+          </template>
+        </el-table-column>
+        <el-table-column label="来源" width="100" align="center">
+          <template #default="{ row }">
+            <el-tag size="small" :type="row.share_source === 'model' ? 'success' : row.share_source === 'manual' ? 'warning' : row.share_source === 'artifact_required' ? 'danger' : 'info'">
+              {{ sourceLabel(row.share_source) }}
+            </el-tag>
           </template>
         </el-table-column>
         <el-table-column prop="share_band_label" label="比重档位" width="110" align="center">
@@ -235,6 +249,23 @@ const categories = computed(() => {
 
 // 统计
 const stats = computed(() => shareStore.stats)
+
+const artifactRequired = computed(() => {
+  return shareStore.results.some(r => r.share_source === 'artifact_required')
+})
+const shareError = computed(() => {
+  if (artifactRequired.value) return ''
+  return shareStore.error || ''
+})
+
+function sourceLabel(s) {
+  if (s === 'model') return '模型估计'
+  if (s === 'fallback') return '分层回退'
+  if (s === 'manual') return '人工核定'
+  if (s === 'artifact_required') return '模型缺失'
+  return s || '—'
+}
+
 const avgSharePct = computed(() => {
   if (!stats.value?.avg_share) return 0
   return (stats.value.avg_share * 100).toFixed(1)
