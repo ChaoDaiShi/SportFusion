@@ -18,6 +18,7 @@ from knowledge.loader import get_active_version_metadata
 
 class BatchStatus(str, Enum):
     CREATED = "created"
+    DATA_READY = "data_ready"
     IMPORTING = "importing"
     IMPORTED = "imported"
     RECOGNITION_RUNNING = "recognition_running"
@@ -30,6 +31,7 @@ class BatchStatus(str, Enum):
     VALIDATION_DONE = "validation_done"
     REVIEWING = "reviewing"
     REVIEW_DONE = "review_done"
+    FINALIZED = "finalized"
     LOCKED = "locked"
     ERROR = "error"
 
