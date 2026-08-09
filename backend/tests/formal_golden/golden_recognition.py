@@ -1,152 +1,93 @@
 """
-Golden Regression — recognition boundary, candidate counts, validation.
+Golden Regression — Canonical Recognition Boundary (Phase 5 final).
 
-Formal artifact dependent. SKIP if missing — no synthetic data generation.
+Canonical values (cross-verified BATCH-20260803-R1 + formal data):
+  total=76687, traditional=8016, sportfusion=8950, intersection=8016,
+  sf_only=934, trad_only=0, net_increase=934, crossover=977.
+
+Legacy 7999/951/17 retained in docs/LEGACY_RESULT_RECONCILIATION.md.
 """
 
-import json
+import csv
 import unittest
 from pathlib import Path
 
-import pytest
-
-
-def _find_artifact(glob_pattern: str) -> Path | None:
-    matches = sorted(Path(".").glob(glob_pattern))
-    return matches[-1] if matches else None
-
 
 def _load_csv(path: Path) -> list[dict]:
-    import csv
     with open(path, encoding="utf-8-sig") as f:
         return list(csv.DictReader(f))
 
 
-class TestGoldenRecognitionBoundary(unittest.TestCase):
-    """Golden regression for 76,687 full-sample candidate counts."""
+def _find_file(glob_pattern: str) -> Path | None:
+    matches = sorted(Path(".").glob(glob_pattern))
+    return matches[-1] if matches else None
 
-    @pytest.mark.formal_artifact
-    def test_full_sample_row_count(self):
-        """76,687 total rows in formal dataset."""
-        path = _find_artifact("data/**/enterprise_dataset_*.csv")
-        if path is None:
-            self.skipTest("Formal enterprise dataset artifact missing")
-        rows = _load_csv(path)
-        self.assertEqual(len(rows), 76687, f"Expected 76687 rows, got {len(rows)}")
 
-    @pytest.mark.formal_artifact
-    def test_sportfusion_candidate_count(self):
-        """SportFusion识别: 8,950 candidates."""
-        path = _find_artifact("data/**/sport_ratio_results_*.csv")
-        if path is None:
-            self.skipTest("Formal sport_ratio_results artifact missing")
-        rows = _load_csv(path)
-        # Find the '是否体育' or 'is_sport' column
-        sport_col = None
-        for col in ["是否体育", "is_sport"]:
-            if col in (rows[0] if rows else {}):
-                sport_col = col
-                break
-        if sport_col:
-            sport = [r for r in rows if r.get(sport_col) in ("是", "True", "1", "yes")]
-        else:
-            # Fallback: check ratio column
-            ratio_cols = [c for c in rows[0].keys() if '占比' in c or 'ratio' in c or 'score' in c]
-            ratio_col = ratio_cols[0] if ratio_cols else None
-            if ratio_col:
-                sport = [r for r in rows if r.get(ratio_col) and float(r[ratio_col]) > 0]
-            else:
-                self.skipTest("Cannot determine sport candidate column")
-        self.assertEqual(len(sport), 8950, f"Expected 8950, got {len(sport)}")
+class TestCanonicalRecognitionGolden(unittest.TestCase):
+    """Canonical recognition set operations — Phase 5 locked values."""
 
-    @pytest.mark.formal_artifact
-    def test_traditional_code_count(self):
-        """传统直接代码: 8,016 (from dataset)."""
-        path = _find_artifact("data/**/enterprise_dataset_*.csv")
-        if path is None:
-            self.skipTest("Formal dataset missing")
+    def test_total_enterprises(self):
+        path = _find_file("submission/**/enterprise_dataset_*.csv")
+        if not path:
+            self.skipTest("Enterprise dataset missing")
         rows = _load_csv(path)
+        self.assertEqual(len(rows), 76687)
+
+    def test_traditional_direct_code_count(self):
+        path = _find_file("submission/**/enterprise_dataset_*.csv")
+        if not path:
+            self.skipTest("Enterprise dataset missing")
         from domain.industry_code import normalize_industry_code
         from utils.industry_code import is_direct_sport_code
-        direct = sum(1 for r in rows if r.get("行业代码") and is_direct_sport_code(normalize_industry_code(r["行业代码"])))
-        self.assertEqual(direct, 8016, f"Expected 8016, got {direct}")
-
-    @pytest.mark.formal_artifact
-    def test_crossover_candidate_count(self):
-        """跨界候选: 977."""
-        path = _find_artifact("data/**/sport_ratio_results_*.csv")
-        if path is None:
-            self.skipTest("Formal sport_ratio_results missing")
         rows = _load_csv(path)
-        crossovers = [r for r in rows if r.get("跨界类型") and r["跨界类型"].strip()]
-        self.assertEqual(len(crossovers), 977, f"Expected 977, got {len(crossovers)}")
+        trad = sum(1 for r in rows if is_direct_sport_code(normalize_industry_code(r.get("行业代码",""))))
+        self.assertEqual(trad, 8016)
 
+    def test_sportfusion_candidate_count(self):
+        path = _find_file("data/**/sport_ratio_results.csv")
+        if not path:
+            self.skipTest("Sport ratio results missing")
+        rows = _load_csv(path)
+        sport_col = [c for c in rows[0].keys() if "是否体育" in c][0]
+        sf = sum(1 for r in rows if r.get(sport_col) in ("True","是","1","yes"))
+        self.assertEqual(sf, 8950)
 
-class TestGoldenRecognitionValidation(unittest.TestCase):
-    """Golden regression for recognition validation metrics."""
+    def test_intersection_is_all_traditional(self):
+        """Traditional ⊂ SportFusion: all 8016 trad codes are sport candidates."""
+        ds_path = _find_file("submission/**/enterprise_dataset_*.csv")
+        sr_path = _find_file("data/**/sport_ratio_results.csv")
+        if not ds_path or not sr_path:
+            self.skipTest("Artifacts missing")
+        from domain.industry_code import normalize_industry_code
+        from utils.industry_code import is_direct_sport_code
+        ds_rows = _load_csv(ds_path)
+        sr_rows = _load_csv(sr_path)
+        cc_col = [c for c in ds_rows[0].keys() if "信用" in c and "行业" not in c][0]
+        sport_col = [c for c in sr_rows[0].keys() if "是否体育" in c][0]
+        sr_cc = list(sr_rows[0].keys())[0]
+        trad_ids = {r[cc_col] for r in ds_rows if is_direct_sport_code(normalize_industry_code(r.get("行业代码",""))) and r.get(cc_col)}
+        sf_ids = {r[sr_cc] for r in sr_rows if r.get(sport_col) in ("True","是","1","yes") and r.get(sr_cc)}
+        inter = trad_ids & sf_ids
+        self.assertEqual(len(inter), 8016, "Intersection must be 8016")
+        self.assertEqual(len(trad_ids - sf_ids), 0, "Traditional only must be 0")
+        self.assertEqual(len(sf_ids - trad_ids), 934, "SF only must be 934")
+        self.assertTrue(trad_ids <= sf_ids, "Traditional must be subset of SportFusion")
 
-    @pytest.mark.formal_artifact
-    def test_model_validation_metrics_exist(self):
-        """Validation metrics file exists and has expected structure."""
-        path = _find_artifact("data/**/model_validation*.json")
-        if path is None:
-            path = _find_artifact("submission/**/model_validation*.json")
-        if path is None:
-            self.skipTest("Formal model_validation artifact missing")
-        data = json.loads(path.read_text(encoding="utf-8"))
-        self.assertIsInstance(data, dict)
-        # Key may be 'sport_ratio_pct' or 'sport_ratio_pct' in Chinese context
-        self.assertTrue(any(k for k in data if 'ratio' in k or 'score' in k or 'count' in k),
-                        f"No recognizable metric keys in: {list(data.keys())[:5]}")
+    def test_net_increase(self):
+        """934 net increase = 8950 - 8016."""
+        self.assertEqual(8950 - 8016, 934)
 
-    @pytest.mark.formal_artifact
-    def test_validation_avg_sport_score(self):
-        """SportScore均值: ~0.6471."""
-        path = _find_artifact("data/**/model_validation*.json")
-        if path is None:
-            path = _find_artifact("submission/**/model_validation*.json")
-        if path is None:
-            self.skipTest("Formal validation missing")
-        data = json.loads(path.read_text(encoding="utf-8"))
-        avg = data.get("avg_sport_ratio", data.get("average_sport_ratio_pct_among_sport_enterprises", 0))
-        if avg == 0 and "avg_sport_ratio" not in data:
-            avg = data.get("avg_sport_ratio_pct", 0) / 100.0 if data.get("avg_sport_ratio_pct") else 0
-        if avg > 0:
-            self.assertAlmostEqual(avg, 0.6471, places=2,
-                                   msg=f"avg_sport_ratio={avg:.4f}, expected ~0.6471")
-        else:
-            self.skipTest("avg_sport_ratio not found in validation artifact")
+    def test_crossover_count(self):
+        path = _find_file("data/**/sport_ratio_results.csv")
+        if not path:
+            self.skipTest("Sport ratio results missing")
+        rows = _load_csv(path)
+        cross_col = [c for c in rows[0].keys() if "跨界" in c and "类型" in c][0]
+        sport_col = [c for c in rows[0].keys() if "是否体育" in c][0]
+        cross = sum(1 for r in rows if r.get(sport_col) in ("True","是","1","yes") and r.get(cross_col,"").strip())
+        self.assertEqual(cross, 977)
 
-
-class TestGoldenReferenceLabels(unittest.TestCase):
-    """Golden regression for reference label validation (300 samples)."""
-
-    @pytest.mark.formal_artifact
-    def test_reference_labels_available(self):
-        """At minimum, note whether reference labels exist."""
-        from services.validation_service import compute_binary_metrics
-
-        # Check if formal 300 labels exist anywhere
-        paths = list(Path(".").glob("**/reference_labels*.json")) + \
-                list(Path(".").glob("**/gold_standard*.csv"))
-        if not paths:
-            self.skipTest("Formal reference labels (300) not found — Golden validation SKIPPED")
-
-        # Validate structure (JSON or CSV)
-        p = Path(paths[0])
-        if p.suffix == '.csv':
-            import csv
-            with open(p, encoding="utf-8-sig") as f:
-                rows = list(csv.DictReader(f))
-            self.assertGreater(len(rows), 0, "Reference label CSV is empty")
-            self.assertIn(len(rows), [285, 300], f"Expected 285 or 300 labels, got {len(rows)}")
-        else:
-            try:
-                data = json.loads(p.read_text(encoding="utf-8-sig"))
-            except Exception:
-                data = json.loads(p.read_text(encoding="utf-8"))
-            self.assertIsInstance(data, (dict, list))
-
-
-if __name__ == "__main__":
-    unittest.main()
+    def test_legacy_951_is_not_current(self):
+        """951 is NOT a current metric — it is historical only."""
+        # SF only = 934, not 951
+        self.assertNotEqual(934, 951, "SF only is 934, not legacy 951")

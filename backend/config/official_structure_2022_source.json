@@ -1,0 +1,38 @@
+{
+  "meta": {
+    "version": "OFFICIAL-STRUCTURE-2022",
+    "description": "四川省2022年体育产业总产出和增加值 — 11类官方结构",
+    "source": "四川省体育局/统计局官方发布",
+    "year": 2022,
+    "region": "四川省",
+    "total_output": 2170.80,
+    "total_added_value": 792.70,
+    "unit": "亿元",
+    "official_11class_to_project_9class_mapping": {
+      "体育管理活动": "体育管理",
+      "体育竞赛表演活动": "体育赛事",
+      "体育健身休闲活动": "健身休闲",
+      "体育场地和设施管理": "体育场馆",
+      "体育经纪与代理、广告与会展、表演与设计服务": "体育管理",
+      "体育教育与培训": "体育培训",
+      "体育传媒与信息服务": "体育传媒",
+      "体育用品及相关产品销售、出租与贸易代理": "体育用品",
+      "其他体育服务": "distributed_by_sportshare_weights",
+      "体育用品及相关产品制造": "体育用品",
+      "体育场地设施建设": "体育场馆"
+    }
+  },
+  "structure": [
+    {"class_name": "体育管理活动", "output": 49.7, "added_value": 25.5},
+    {"class_name": "体育竞赛表演活动", "output": 16.6, "added_value": 7.6},
+    {"class_name": "体育健身休闲活动", "output": 178.1, "added_value": 80.2},
+    {"class_name": "体育场地和设施管理", "output": 52.0, "added_value": 20.3},
+    {"class_name": "体育经纪与代理、广告与会展、表演与设计服务", "output": 78.7, "added_value": 28.5},
+    {"class_name": "体育教育与培训", "output": 161.6, "added_value": 91.8},
+    {"class_name": "体育传媒与信息服务", "output": 203.9, "added_value": 93.7},
+    {"class_name": "体育用品及相关产品销售、出租与贸易代理", "output": 267.9, "added_value": 94.1},
+    {"class_name": "其他体育服务", "output": 386.6, "added_value": 142.3},
+    {"class_name": "体育用品及相关产品制造", "output": 504.0, "added_value": 168.3},
+    {"class_name": "体育场地设施建设", "output": 271.8, "added_value": 40.4}
+  ]
+}
