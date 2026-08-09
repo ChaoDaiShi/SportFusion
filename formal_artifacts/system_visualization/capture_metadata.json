@@ -1,0 +1,90 @@
+﻿{
+    "captured_at":  "2026-08-09T16:59:51.2016016+08:00",
+    "commit":  "f2f17f8c19664060a8743b7170bcbb2054a19e81",
+    "viewport":  "1920x1080",
+    "backend_url":  "http://127.0.0.1:8000",
+    "frontend_url":  "http://127.0.0.1:5173",
+    "captures":  [
+                     {
+                         "id":  "a-monitoring",
+                         "route":  "/monitoring",
+                         "title":  "统计监测驾驶舱",
+                         "focus":  "批次口径、五步工作流与区域风险",
+                         "url":  "http://127.0.0.1:5173/monitoring",
+                         "path":  "F:\\比赛\\大数据要素分析\\.worktrees\\codex-sportfusion-visual-report\\formal_artifacts\\system_visualization\\raw\\a-monitoring.png",
+                         "bytes":  177677
+                     },
+                     {
+                         "id":  "b-data",
+                         "route":  "/data",
+                         "title":  "企业数据治理",
+                         "focus":  "数据导入、清洗、解析与过程追踪",
+                         "url":  "http://127.0.0.1:5173/data",
+                         "path":  "F:\\比赛\\大数据要素分析\\.worktrees\\codex-sportfusion-visual-report\\formal_artifacts\\system_visualization\\raw\\b-data.png",
+                         "bytes":  45814
+                     },
+                     {
+                         "id":  "c-recognition",
+                         "route":  "/recognition",
+                         "title":  "企业边界识别",
+                         "focus":  "文本—代码双通道证据与SportScore",
+                         "url":  "http://127.0.0.1:5173/recognition",
+                         "path":  "F:\\比赛\\大数据要素分析\\.worktrees\\codex-sportfusion-visual-report\\formal_artifacts\\system_visualization\\raw\\c-recognition.png",
+                         "bytes":  65079
+                     },
+                     {
+                         "id":  "d-share",
+                         "route":  "/share",
+                         "title":  "经营比重测算",
+                         "focus":  "SportShare来源、区间与结构权重",
+                         "url":  "http://127.0.0.1:5173/share",
+                         "path":  "F:\\比赛\\大数据要素分析\\.worktrees\\codex-sportfusion-visual-report\\formal_artifacts\\system_visualization\\raw\\d-share.png",
+                         "bytes":  65623
+                     },
+                     {
+                         "id":  "e-scale",
+                         "route":  "/scale",
+                         "title":  "产业规模测算",
+                         "focus":  "宏观总量校准、九类业态结构与正式口径边界",
+                         "url":  "http://127.0.0.1:5173/scale",
+                         "path":  "F:\\比赛\\大数据要素分析\\.worktrees\\codex-sportfusion-visual-report\\formal_artifacts\\system_visualization\\raw\\e-scale.png",
+                         "bytes":  72777
+                     },
+                     {
+                         "id":  "f-evaluation",
+                         "route":  "/model-evaluation",
+                         "title":  "模型性能评估",
+                         "focus":  "可复算指标、验证边界与异常状态",
+                         "url":  "http://127.0.0.1:5173/model-evaluation",
+                         "path":  "F:\\比赛\\大数据要素分析\\.worktrees\\codex-sportfusion-visual-report\\formal_artifacts\\system_visualization\\raw\\f-evaluation.png",
+                         "bytes":  82557
+                     },
+                     {
+                         "id":  "g-review",
+                         "route":  "/review",
+                         "title":  "人工复核工作台",
+                         "focus":  "P1—P4优先级、双人复核与仲裁",
+                         "url":  "http://127.0.0.1:5173/review",
+                         "path":  "F:\\比赛\\大数据要素分析\\.worktrees\\codex-sportfusion-visual-report\\formal_artifacts\\system_visualization\\raw\\g-review.png",
+                         "bytes":  82344
+                     },
+                     {
+                         "id":  "h-directory",
+                         "route":  "/directory",
+                         "title":  "动态企业名录",
+                         "focus":  "finalized过滤、状态与证据追溯",
+                         "url":  "http://127.0.0.1:5173/directory",
+                         "path":  "F:\\比赛\\大数据要素分析\\.worktrees\\codex-sportfusion-visual-report\\formal_artifacts\\system_visualization\\raw\\h-directory.png",
+                         "bytes":  60571
+                     },
+                     {
+                         "id":  "i-export",
+                         "route":  "/export",
+                         "title":  "报告与成果导出",
+                         "focus":  "批次锁定、版本信息与结构化输出",
+                         "url":  "http://127.0.0.1:5173/export",
+                         "path":  "F:\\比赛\\大数据要素分析\\.worktrees\\codex-sportfusion-visual-report\\formal_artifacts\\system_visualization\\raw\\i-export.png",
+                         "bytes":  104328
+                     }
+                 ]
+}

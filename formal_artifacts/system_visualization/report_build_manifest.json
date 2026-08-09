@@ -1,0 +1,232 @@
+{
+  "screenshots": [
+    {
+      "id": "a-monitoring",
+      "raw": "formal_artifacts\\system_visualization\\raw\\a-monitoring.png",
+      "processed": "formal_artifacts\\system_visualization\\processed\\a-monitoring.png",
+      "raw_sha256": "9cb94f15db9169009e99059fc29d56b6d91215a31b3308ea8529cd0d8737810d",
+      "processed_sha256": "feded8f65f2edbbb0941e5b086632ff4137f834ee9b0aa529cc8efb4da7a387b",
+      "raw_size": [
+        1920,
+        1080
+      ],
+      "processed_size": [
+        1936,
+        1192
+      ],
+      "raw_pixel_rectangle": [
+        8,
+        8,
+        1928,
+        1088
+      ],
+      "raw_pixels_preserved": true,
+      "badge": "演示界面"
+    },
+    {
+      "id": "b-data",
+      "raw": "formal_artifacts\\system_visualization\\raw\\b-data.png",
+      "processed": "formal_artifacts\\system_visualization\\processed\\b-data.png",
+      "raw_sha256": "eb69142cecec8d4e689f30123b2204e24231a689e14ad3ae4b2069fe822fcc80",
+      "processed_sha256": "2898f80b5960a51219a09c2bb5bb24a43915c6600ae90864ddc0594bd2062db1",
+      "raw_size": [
+        1920,
+        1080
+      ],
+      "processed_size": [
+        1936,
+        1192
+      ],
+      "raw_pixel_rectangle": [
+        8,
+        8,
+        1928,
+        1088
+      ],
+      "raw_pixels_preserved": true,
+      "badge": "真实空态"
+    },
+    {
+      "id": "c-recognition",
+      "raw": "formal_artifacts\\system_visualization\\raw\\c-recognition.png",
+      "processed": "formal_artifacts\\system_visualization\\processed\\c-recognition.png",
+      "raw_sha256": "0ba409a19f45b3b5d8bda947135788cce75a44a6c539f4673ccc658627794d0c",
+      "processed_sha256": "376f3f380cf2bd1df6d8e95820c08228bddefbb6087b18eec4fc8aff12825805",
+      "raw_size": [
+        1920,
+        1080
+      ],
+      "processed_size": [
+        1936,
+        1192
+      ],
+      "raw_pixel_rectangle": [
+        8,
+        8,
+        1928,
+        1088
+      ],
+      "raw_pixels_preserved": true,
+      "badge": "真实空态"
+    },
+    {
+      "id": "d-share",
+      "raw": "formal_artifacts\\system_visualization\\raw\\d-share.png",
+      "processed": "formal_artifacts\\system_visualization\\processed\\d-share.png",
+      "raw_sha256": "12dabc0af06c11b97eadce0b614c23a27881f1d31400c67f31cc24ea21764ef8",
+      "processed_sha256": "1675c2fbc8953aa55bf19dde4cef1517972c8f8639e845cdc2a3b3568948fee4",
+      "raw_size": [
+        1920,
+        1080
+      ],
+      "processed_size": [
+        1936,
+        1192
+      ],
+      "raw_pixel_rectangle": [
+        8,
+        8,
+        1928,
+        1088
+      ],
+      "raw_pixels_preserved": true,
+      "badge": "真实空态"
+    },
+    {
+      "id": "e-scale",
+      "raw": "formal_artifacts\\system_visualization\\raw\\e-scale.png",
+      "processed": "formal_artifacts\\system_visualization\\processed\\e-scale.png",
+      "raw_sha256": "bf1a770c5691fe9579db88b898f3d403cdb9978e63b86f005639ba9234bf29c6",
+      "processed_sha256": "8d315d066d8f70caa758b4552deccac70189d81d98eadf971431502104713471",
+      "raw_size": [
+        1920,
+        1080
+      ],
+      "processed_size": [
+        1936,
+        1192
+      ],
+      "raw_pixel_rectangle": [
+        8,
+        8,
+        1928,
+        1088
+      ],
+      "raw_pixels_preserved": true,
+      "badge": "正式口径"
+    },
+    {
+      "id": "f-evaluation",
+      "raw": "formal_artifacts\\system_visualization\\raw\\f-evaluation.png",
+      "processed": "formal_artifacts\\system_visualization\\processed\\f-evaluation.png",
+      "raw_sha256": "8266a2040ebb9e7d4f453f08f9b4ec4e788a07db9aad21be4013076e1472ddc5",
+      "processed_sha256": "05336fb0a1faa4a2538f204bab590dc807174d3a23cabddd205554b98419c23f",
+      "raw_size": [
+        1920,
+        1080
+      ],
+      "processed_size": [
+        1936,
+        1192
+      ],
+      "raw_pixel_rectangle": [
+        8,
+        8,
+        1928,
+        1088
+      ],
+      "raw_pixels_preserved": true,
+      "badge": "演示界面"
+    },
+    {
+      "id": "g-review",
+      "raw": "formal_artifacts\\system_visualization\\raw\\g-review.png",
+      "processed": "formal_artifacts\\system_visualization\\processed\\g-review.png",
+      "raw_sha256": "bb01834a03093bf6b6656069836c0840b0ea73bea93e7c230e168f602a49f4d4",
+      "processed_sha256": "dc2a6047c2b440ab8cc2cda5da903fe469aae405bfbcfb55516b4a20ab47b834",
+      "raw_size": [
+        1920,
+        1080
+      ],
+      "processed_size": [
+        1936,
+        1192
+      ],
+      "raw_pixel_rectangle": [
+        8,
+        8,
+        1928,
+        1088
+      ],
+      "raw_pixels_preserved": true,
+      "badge": "功能演示"
+    },
+    {
+      "id": "h-directory",
+      "raw": "formal_artifacts\\system_visualization\\raw\\h-directory.png",
+      "processed": "formal_artifacts\\system_visualization\\processed\\h-directory.png",
+      "raw_sha256": "da5f82675b25d9007e2fd1085fe5b5a6df8e07aff22669d52c64efbccf181638",
+      "processed_sha256": "99fea7f68adafec3436106b21e122969b4e9377e476bc7f9fdfaa59ceb67ff3b",
+      "raw_size": [
+        1920,
+        1080
+      ],
+      "processed_size": [
+        1936,
+        1192
+      ],
+      "raw_pixel_rectangle": [
+        8,
+        8,
+        1928,
+        1088
+      ],
+      "raw_pixels_preserved": true,
+      "badge": "真实空态"
+    },
+    {
+      "id": "i-export",
+      "raw": "formal_artifacts\\system_visualization\\raw\\i-export.png",
+      "processed": "formal_artifacts\\system_visualization\\processed\\i-export.png",
+      "raw_sha256": "5562ef4451a2b00bddb407afe8ab0420e88ec3a4f7a830f35a790c6835268eae",
+      "processed_sha256": "90361deb77f3223def3d598514b2ba379489ee9aec46fa08a1adb0b1fd52be1d",
+      "raw_size": [
+        1920,
+        1080
+      ],
+      "processed_size": [
+        1936,
+        1192
+      ],
+      "raw_pixel_rectangle": [
+        8,
+        8,
+        1928,
+        1088
+      ],
+      "raw_pixels_preserved": true,
+      "badge": "演示界面"
+    }
+  ],
+  "report": {
+    "source": "C:\\Users\\25113\\Downloads\\体融识界·SportFusion——多元经营背景下企业体育业务识别与区域产业规模估算（基于文本—代码双通道与可解释证据融合技术）_系统口径同步.docx",
+    "output": "formal_artifacts\\system_visualization\\体融识界·SportFusion_系统可视化完善版.docx",
+    "source_sha256": "8b403f4bf3f6325761acbf028dc319f76d7a20df10323b87625da4bca7586682",
+    "output_sha256": "e2575f7e14418f798575843ab2f5572db2d4061e300714dbff4120c2e5c00142",
+    "original_counts": {
+      "paragraphs": 384,
+      "tables": 56,
+      "inline_shapes": 19,
+      "sections": 2
+    },
+    "final_counts": {
+      "paragraphs": 417,
+      "tables": 56,
+      "inline_shapes": 28,
+      "sections": 2
+    },
+    "manual_toc_entries_updated": 19,
+    "quality_gate_rows_updated": 1,
+    "placeholder_language_removed": true
+  }
+}
