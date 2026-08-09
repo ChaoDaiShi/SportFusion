@@ -233,5 +233,67 @@ class TestFullRestartPersistence(unittest.TestCase):
         self.assertGreaterEqual(len(entries), 1, "Directory must have finalized entries")
 
 
+class TestScaleScenarioValidationRepos(unittest.TestCase):
+    """Scale/Scenario/Validation repo roundtrip (DB not tested — requires in-memory SQLite)."""
+
+    def test_scale_file_roundtrip(self):
+        from repositories.scale_repo import FileScaleRepository
+        import tempfile
+        with tempfile.TemporaryDirectory() as d:
+            repo = FileScaleRepository(base_dir=d)
+            results = [{"type": "category", "total_allocated": 2170.80, "outputs": {"体育赛事": 1085.40, "健身休闲": 1085.40}}]
+            repo.save_batch("B-SCALE", results)
+            repo2 = FileScaleRepository(base_dir=d)
+            loaded = repo2.load_batch("B-SCALE")
+            self.assertEqual(len(loaded), 1)
+            self.assertEqual(loaded[0]["total_allocated"], 2170.80)
+
+    def test_scale_memory_roundtrip(self):
+        from repositories.scale_repo import MemoryScaleRepository
+        repo = MemoryScaleRepository()
+        results = [{"type": "category", "total_allocated": 2170.80}]
+        repo.save_batch("B1", results)
+        loaded = repo.load_batch("B1")
+        self.assertEqual(loaded[0]["total_allocated"], 2170.80)
+
+    def test_scenario_file_roundtrip(self):
+        from repositories.scale_repo import FileScenarioRepository
+        import tempfile
+        with tempfile.TemporaryDirectory() as d:
+            repo = FileScenarioRepository(base_dir=d)
+            results = [{"scenario_id": "standard_alpha_20", "total_allocated": 2170.80, "status": "ok"}]
+            repo.save_batch("B-SCEN", results)
+            repo2 = FileScenarioRepository(base_dir=d)
+            loaded = repo2.load_batch("B-SCEN")
+            self.assertEqual(loaded[0]["status"], "ok")
+
+    def test_scenario_memory_roundtrip(self):
+        from repositories.scale_repo import MemoryScenarioRepository
+        repo = MemoryScenarioRepository()
+        results = [{"scenario_id": "s1", "total_allocated": 2170.80}]
+        repo.save_batch("B1", results)
+        loaded = repo.load_batch("B1")
+        self.assertEqual(len(loaded), 1)
+
+    def test_validation_file_roundtrip(self):
+        from repositories.scale_repo import FileValidationRepository
+        import tempfile
+        with tempfile.TemporaryDirectory() as d:
+            repo = FileValidationRepository(base_dir=d)
+            results = [{"type": "audit", "passed": 23, "total": 24}]
+            repo.save_batch("B-VAL", results)
+            repo2 = FileValidationRepository(base_dir=d)
+            loaded = repo2.load_batch("B-VAL")
+            self.assertEqual(loaded[0]["passed"], 23)
+
+    def test_validation_memory_roundtrip(self):
+        from repositories.scale_repo import MemoryValidationRepository
+        repo = MemoryValidationRepository()
+        results = [{"type": "audit", "passed": 23}]
+        repo.save_batch("B1", results)
+        loaded = repo.load_batch("B1")
+        self.assertEqual(len(loaded), 1)
+
+
 if __name__ == "__main__":
     unittest.main()
