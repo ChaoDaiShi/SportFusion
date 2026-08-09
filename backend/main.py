@@ -1,11 +1,12 @@
 """FastAPI 项目入口 - 多元经营体育产业规模测算可视化平台"""
 
+import logging
+import traceback
+
+from dotenv import load_dotenv
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from dotenv import load_dotenv
-import logging
-import traceback
 
 load_dotenv()
 
@@ -32,8 +33,17 @@ app.add_middleware(
 )
 
 # 注册路由模块
-from routers import assistant, data_preprocess, enterprise_recognition, output_calc, chart_data, model_validate, chat, monitoring
-from api import share, scale, review, system, validate
+from api import directory, review, scale, share, system, validate
+from routers import (
+    assistant,
+    chart_data,
+    chat,
+    data_preprocess,
+    enterprise_recognition,
+    model_validate,
+    monitoring,
+    output_calc,
+)
 
 app.include_router(data_preprocess.router, prefix="/api/data", tags=["数据预处理"])
 app.include_router(enterprise_recognition.router, prefix="/api/recognition", tags=["企业识别"])
@@ -48,6 +58,7 @@ app.include_router(scale.router, prefix="/api/scale", tags=["规模测算"])
 app.include_router(review.router, prefix="/api/review", tags=["人工复核"])
 app.include_router(system.router, prefix="/api/system", tags=["系统管理"])
 app.include_router(validate.router, prefix="/api/validation", tags=["模型验证"])
+app.include_router(directory.router, prefix="/api/directory", tags=["动态名录"])
 
 
 @app.get("/")
@@ -58,7 +69,7 @@ def root():
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     """全局异常处理器"""
-    logging.error(f"全局异常: {str(exc)}")
+    logging.error(f"全局异常: {exc!s}")
     logging.error(traceback.format_exc())
     return JSONResponse(
         status_code=500,

@@ -1,6 +1,21 @@
 <template>
   <div class="scale-analysis-page">
-    <h2 class="page-title">产业规模测算</h2>
+    <h2 class="page-title">产业规模测算 (Macro-Calibrated)</h2>
+
+    <!-- Official total constraint -->
+    <el-alert type="success" :closable="false" show-icon style="margin-bottom:12px">
+      <template #title>
+        官方总量约束：四川省 2022 年体育产业总产出 <strong>2,170.80 亿元</strong>
+        &nbsp;|&nbsp; 宏观校准版本：OFFICIAL-TOTALS-2026-08
+      </template>
+      正式规模采用宏观结构分配法。企业营业收入 × SportShare 的旧路径已标记为 legacy，不再作为正式规模结果。
+    </el-alert>
+
+    <!-- ±15% deprecated warning -->
+    <el-alert type="warning" :closable="false" show-icon style="margin-bottom:12px">
+      <template #title>固定 ±15% 区间已弃用</template>
+      下方估算区间来自 Phase 3 残差分位数方法或旧兼容路径。正式区间应基于模型残差分布 (q_0.90) 或 12 情景变异。
+    </el-alert>
 
     <!-- 口径标签 -->
     <el-alert v-if="scaleStore.summary" type="info" :closable="false" show-icon style="margin-bottom:20px">
@@ -166,11 +181,18 @@
         </el-button>
       </template>
     </el-dialog>
+
+    <ProvenancePanel v-if="scaleStore.summary" :provenance="{
+      macro_calibration_version: 'OFFICIAL-TOTALS-2026-08',
+      scenario_version: 'SCENARIO-2026-08',
+      sportshare_model_version: 'SPORTSHARE-RF-2026-08',
+    }" />
   </div>
 </template>
 
 <script setup>
 import { ref, computed, reactive, onMounted } from 'vue'
+import ProvenancePanel from '../components/ProvenancePanel.vue'
 import { ElMessage } from 'element-plus'
 import { useScaleStore } from '../store/scale'
 import { useDataStore } from '../store/data'

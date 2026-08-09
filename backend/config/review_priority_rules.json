@@ -1,0 +1,44 @@
+{
+  "meta": {
+    "version": "REVIEW-RULES-2026-08",
+    "description": "P1-P4复核优先级规则 — configurable, version-tracked, testable"
+  },
+  "priorities": {
+    "P1": {
+      "label": "重点复核",
+      "description": "高证据冲突或高风险跨界 — 需要立即复核",
+      "rules": [
+        {"name": "direct_code_text_conflict", "condition": "code_type == 'direct' and sport_score < 0.15", "reason": "直接体育代码但文本证据弱"},
+        {"name": "high_crossover", "condition": "is_crossover and sport_score > 0.2", "reason": "跨界经营且体育证据较强"},
+        {"name": "evidence_contradiction", "condition": "evidence_relation in ['direct_code_text_conflict', 'text_only_sport'] and sport_score > 0.3", "reason": "证据关系存在矛盾"},
+        {"name": "low_confidence_high_stakes", "condition": "confidence < 0.6 and sport_score > 0.0", "reason": "低置信度但有体育信号"}
+      ]
+    },
+    "P2": {
+      "label": "常规复核",
+      "description": "中等证据 — 需要常规复核确认",
+      "rules": [
+        {"name": "borderline_candidate", "condition": "0.08 <= sport_score <= 0.15 and confidence > 0.7", "reason": "接近候选阈值的边界企业"},
+        {"name": "indirect_code_text", "condition": "code_type == 'indirect' and sport_score > 0.1", "reason": "间接代码且有文本证据"},
+        {"name": "few_keywords", "condition": "len(keywords) <= 2 and sport_score > 0", "reason": "关键词证据较少"},
+        {"name": "single_sport_line_low_score", "condition": "total_lines > 0 and sport_lines == 1 and sport_score < 0.3", "reason": "单条体育线但证据不强"}
+      ]
+    },
+    "P3": {
+      "label": "抽样复核",
+      "description": "标准候选 — 抽样复核验证一致性",
+      "rules": [
+        {"name": "standard_sport_candidate", "condition": "is_sport and sport_score >= 0.15 and confidence >= 0.6", "reason": "标准体育候选企业"},
+        {"name": "direct_code_normal", "condition": "code_type == 'direct' and sport_score >= 0.3", "reason": "直接代码且证据强"}
+      ]
+    },
+    "P4": {
+      "label": "低优先级",
+      "description": "非体育或极低证据 — 低优先级",
+      "rules": [
+        {"name": "non_sport", "condition": "not is_sport", "reason": "非体育企业"},
+        {"name": "very_low_evidence", "condition": "sport_score < 0.05 and not is_sport", "reason": "极低体育证据"}
+      ]
+    }
+  }
+}

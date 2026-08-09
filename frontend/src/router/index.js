@@ -82,6 +82,12 @@ const routes = [
     meta: { title: '报表导出' },
   },
   {
+    path: '/directory',
+    name: 'EnterpriseDirectory',
+    component: () => import('../views/EnterpriseDirectory.vue'),
+    meta: { title: '动态名录' },
+  },
+  {
     path: '/:pathMatch(.*)*',
     name: 'NotFound',
     component: () => import('../views/NotFound.vue'),
