@@ -1,132 +1,83 @@
 {
-  "artifacts": [
-    {
-      "artifact_id": "enterprise_dataset",
+  "version": "SPORTFUSION-FORMAL-2026-08-09",
+  "generated_at": "2026-08-09T18:00:00Z",
+  "artifacts": {
+    "reference_labels_300": {
       "status": "available",
-      "files": [
-        {
-          "path": "data\\processed\\enterprise_dataset_20260629_160902.csv",
-          "size": 11986028,
-          "sha256": "6826692cb013057cf92b5666022bb63d"
-        },
-        {
-          "path": "data\\processed\\enterprise_boundaries_20260629_160907.csv",
-          "size": 1259982,
-          "sha256": "995ce3363b4b3ee94b7bbc6c1c9ec0e7"
-        },
-        {
-          "path": "data\\processed\\enterprise_dataset_20260629_160902.csv",
-          "size": 11986028,
-          "sha256": "6826692cb013057cf92b5666022bb63d"
-        },
-        {
-          "path": "data\\processed\\enterprise_features_20260629_160902.csv",
-          "size": 6248123,
-          "sha256": "93c2e91c05af64210004bcb66f91a8f2"
-        },
-        {
-          "path": "data\\processed_BATCH-20260803-R1\\enterprise_boundaries.csv",
-          "size": 1276921,
-          "sha256": "05c0a5cdb0ece6d3c2fec6637e09e21b"
-        }
-      ]
+      "source": "xuqiu/annotations/gold_standard_300.csv",
+      "source_sha256": "974e0fa5ba6df0171a3802c95bb3412c",
+      "format": "JSON (derived from CSV)",
+      "rows": 300,
+      "binary_yes": 201,
+      "binary_no": 99,
+      "derived_sha256": "c5b59489164c74d908fc277098e01cc8"
     },
-    {
-      "artifact_id": "sport_ratio_results",
-      "status": "available",
-      "files": [
-        {
-          "path": "data\\processed\\sport_ratio_results_20260629_160907.csv",
-          "size": 9995721,
-          "sha256": "5959be587f77772325d2a5240f3a8f6f"
-        },
-        {
-          "path": "submission\\处理后数据\\sport_ratio_results_20260629_160907.csv",
-          "size": 9995721,
-          "sha256": "5959be587f77772325d2a5240f3a8f6f"
-        }
-      ]
+    "category_labels": {
+      "status": "derived",
+      "source": "reference_labels_300",
+      "filter": "金标准_是否体育=是 AND 金标准_体育业态 in 9 canonical categories",
+      "actual_rows": 159,
+      "target_rows": 184,
+      "note": "42 of 201 是 entries have empty category — actual count is 159, not 184",
+      "derived_sha256": "65ddbcb1723669899280915c20290247"
     },
-    {
-      "artifact_id": "reference_labels",
+    "sportshare_frozen_500": {
       "status": "missing",
-      "files": []
+      "searched": "project + parent directories",
+      "note": "No frozen training samples found. SportShare CV metrics cannot be independently reproduced."
     },
-    {
-      "artifact_id": "category_labels",
+    "official_category_prior": {
       "status": "missing",
-      "files": []
+      "note": "official_totals.json exists (2170.80), but 9-category structural prior not found."
     },
-    {
-      "artifact_id": "official_prior",
-      "status": "missing",
-      "files": []
-    },
-    {
-      "artifact_id": "model_validation",
+    "audit": {
       "status": "available",
-      "files": [
-        {
-          "path": "data\\processed\\model_validation_20260629_160907.json",
-          "size": 4088,
-          "sha256": "7aa8e95bf22fd2c87f0e54fb96053a6c"
-        },
-        {
-          "path": "data\\processed_BATCH-20260803-R1\\model_validation.json",
-          "size": 2736,
-          "sha256": "419fb3db7a6d2f66be613c8d2dc81e38"
-        },
-        {
-          "path": "submission\\处理后数据\\model_validation_20260629_160907.json",
-          "size": 4088,
-          "sha256": "7aa8e95bf22fd2c87f0e54fb96053a6c"
-        }
-      ]
-    },
-    {
-      "artifact_id": "enterprise_boundaries",
-      "status": "available",
-      "files": [
-        {
-          "path": "data\\processed\\enterprise_boundaries_20260629_160907.csv",
-          "size": 1259982,
-          "sha256": "995ce3363b4b3ee94b7bbc6c1c9ec0e7"
-        }
-      ]
-    },
-    {
-      "artifact_id": "preprocess_stats",
-      "status": "available",
-      "files": [
-        {
-          "path": "data\\processed\\preprocess_stats_20260629_160902.json",
-          "size": 1135,
-          "sha256": "b9386ce3e689712409f845b2f2c77796"
-        },
-        {
-          "path": "submission\\处理后数据\\preprocess_stats_20260629_160902.json",
-          "size": 1135,
-          "sha256": "b9386ce3e689712409f845b2f2c77796"
-        }
-      ]
-    },
-    {
-      "artifact_id": "benchmark_logs",
-      "status": "missing",
-      "files": []
-    },
-    {
-      "artifact_id": "audit_output",
-      "status": "available",
-      "files": [
-        {
-          "path": "paper_revision\\artifacts\\data_audit.json",
-          "size": 13134,
-          "sha256": "45348f63a06352c3a9b863a0cc91783d"
-        }
-      ]
+      "checks_registered": 24,
+      "passed": 23,
+      "pending": 1,
+      "pending_reason": "Alembic production migration"
     }
-  ],
-  "generated_at": "2026-08-09",
-  "status": "scanning"
+  },
+  "golden_results": {
+    "recognition": {
+      "total_rows": 76687,
+      "traditional_codes": 8016,
+      "sportfusion_candidates": 8950,
+      "net_increase": 934,
+      "coverage_lift_pct": 11.65,
+      "crossover": 977,
+      "intersection_note": "In current CSV batch, all 8016 traditional codes are in SportFusion results. Report Golden (7999 intersection, 951 SF-only, 17 trad-only) differs — likely batch version difference."
+    },
+    "validation": {
+      "reference_300": "available",
+      "binary_yes": 201,
+      "binary_no": 99,
+      "category_clear": 159,
+      "target_184": 184,
+      "note": "Category clear count is 159 not 184 — 42 entries have empty categories in gold standard."
+    },
+    "sportshare": {
+      "frozen_500": "missing",
+      "model_fallback_distribution": "not yet computed (requires full pipeline run)"
+    },
+    "scale_region": {
+      "official_total": 2170.8,
+      "status": "config exists",
+      "boundary_golden": "requires full pipeline run"
+    },
+    "p1_p4": {
+      "total_candidates": 8950,
+      "distribution": "requires correct code_type from CSV"
+    },
+    "benchmark": {
+      "median_seconds": 11.29,
+      "records_per_sec": 6792,
+      "historical_ref": "9.6s (different hardware)"
+    },
+    "audit": {
+      "registered": 24,
+      "passed": 23,
+      "pending": 1
+    }
+  }
 }
