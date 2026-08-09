@@ -1,0 +1,19 @@
+{
+  "meta": {
+    "version": "OFFICIAL-TOTALS-2026-08",
+    "description": "Official regional sports industry total output constraints for macro calibration",
+    "note": "These values are EXTERNAL constraints — they enter only the scale allocation stage, never SportScore or SportShare training."
+  },
+  "entries": [
+    {
+      "year": 2022,
+      "region": "四川省",
+      "region_code": "510000",
+      "official_total_output": 2170.80,
+      "unit": "亿元",
+      "source": "四川省体育局/统计局官方发布",
+      "source_version": "2022",
+      "enabled": true
+    }
+  ]
+}
