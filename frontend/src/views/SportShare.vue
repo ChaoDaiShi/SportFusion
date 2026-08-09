@@ -66,7 +66,7 @@
         </div>
       </template>
 
-      <el-table :data="pagedResults" stripe border style="width:100%" max-height="500"
+      <el-table :data="pagedResults" stripe border style="width:100%" max-height="500" empty-text="暂无经营比重测算结果"
         @sort-change="handleSortChange">
         <el-table-column prop="enterprise_name" label="企业名称" min-width="180" fixed sortable="custom" />
         <el-table-column prop="industry_code" label="行业代码" width="110" />
