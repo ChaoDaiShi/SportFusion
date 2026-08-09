@@ -279,13 +279,13 @@ class ReviewTaskOut(BaseModel):
 
 
 class ReviewTaskAssignRequest(BaseModel):
-    task_ids: list[int] = Field(..., description="任务ID列表")
+    task_ids: list[str | int] = Field(..., description="任务ID列表")
     reviewer_a: str = Field(..., description="复核员A")
     reviewer_b: str = Field(..., description="复核员B")
 
 
 class ReviewRecordSubmitRequest(BaseModel):
-    review_task_id: int = Field(..., description="复核任务ID")
+    review_task_id: str | int = Field(..., description="复核任务ID")
     reviewer_name: str = Field(..., description="复核人员")
     reviewer_role: str = Field("A", description="角色: A/B")
     sport_attribute: str = Field(..., description="体育属性: yes/no/uncertain")
@@ -313,7 +313,7 @@ class ReviewRecordOut(BaseModel):
 
 
 class ArbitrationRequest(BaseModel):
-    review_task_id: int = Field(..., description="复核任务ID")
+    review_task_id: str | int = Field(..., description="复核任务ID")
     arbiter_name: str = Field(..., description="仲裁员")
     final_sport_attribute: str = Field(..., description="最终体育属性: yes/no/uncertain")
     final_sport_category: str | None = Field(None, description="最终体育业态")

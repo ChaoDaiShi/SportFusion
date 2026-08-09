@@ -17,6 +17,12 @@ import jieba
 
 # ---- 向后兼容：从知识库加载 ----
 from knowledge.loader import load_sports_dictionary
+from services import business_line_service as _business_lines
+
+get_sport_categories = _business_lines.get_sport_categories
+has_sport_content = _business_lines.has_sport_content
+match_sport_by_category = _business_lines.match_sport_by_category
+match_sport_keywords = _business_lines.match_sport_keywords
 
 _dict_data = load_sports_dictionary()
 _cat_map = _dict_data.get("categories", {})
@@ -30,7 +36,7 @@ for term_entry in _dict_data.get("terms", []):
 
 # 扁平化关键词列表
 SPORT_DICT: list[str] = []
-for _cat, _words in SPORT_KEYWORDS_BY_CATEGORY.items():
+for _words in SPORT_KEYWORDS_BY_CATEGORY.values():
     SPORT_DICT.extend(_words)
 
 # 注册到 jieba
