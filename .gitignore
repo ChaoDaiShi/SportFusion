@@ -140,3 +140,6 @@ logs/
 # paper_revision/ and submission/ source files are tracked,
 # but generated PDFs/docx are ignored by the rules above
 data/batches/
+formal_artifacts/_cols*.json
+formal_artifacts/_ref_cols.json
+formal_artifacts/_vals.json

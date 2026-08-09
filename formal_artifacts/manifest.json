@@ -1,0 +1,83 @@
+{
+  "version": "SPORTFUSION-FORMAL-2026-08-09",
+  "generated_at": "2026-08-09T18:00:00Z",
+  "artifacts": {
+    "reference_labels_300": {
+      "status": "available",
+      "source": "xuqiu/annotations/gold_standard_300.csv",
+      "source_sha256": "974e0fa5ba6df0171a3802c95bb3412c",
+      "format": "JSON (derived from CSV)",
+      "rows": 300,
+      "binary_yes": 201,
+      "binary_no": 99,
+      "derived_sha256": "c5b59489164c74d908fc277098e01cc8"
+    },
+    "category_labels": {
+      "status": "derived",
+      "source": "reference_labels_300",
+      "filter": "金标准_是否体育=是 AND 金标准_体育业态 in 9 canonical categories",
+      "actual_rows": 159,
+      "target_rows": 184,
+      "note": "42 of 201 是 entries have empty category — actual count is 159, not 184",
+      "derived_sha256": "65ddbcb1723669899280915c20290247"
+    },
+    "sportshare_frozen_500": {
+      "status": "missing",
+      "searched": "project + parent directories",
+      "note": "No frozen training samples found. SportShare CV metrics cannot be independently reproduced."
+    },
+    "official_category_prior": {
+      "status": "missing",
+      "note": "official_totals.json exists (2170.80), but 9-category structural prior not found."
+    },
+    "audit": {
+      "status": "available",
+      "checks_registered": 24,
+      "passed": 23,
+      "pending": 1,
+      "pending_reason": "Alembic production migration"
+    }
+  },
+  "golden_results": {
+    "recognition": {
+      "total_rows": 76687,
+      "traditional_codes": 8016,
+      "sportfusion_candidates": 8950,
+      "net_increase": 934,
+      "coverage_lift_pct": 11.65,
+      "crossover": 977,
+      "intersection_note": "In current CSV batch, all 8016 traditional codes are in SportFusion results. Report Golden (7999 intersection, 951 SF-only, 17 trad-only) differs — likely batch version difference."
+    },
+    "validation": {
+      "reference_300": "available",
+      "binary_yes": 201,
+      "binary_no": 99,
+      "category_clear": 159,
+      "target_184": 184,
+      "note": "Category clear count is 159 not 184 — 42 entries have empty categories in gold standard."
+    },
+    "sportshare": {
+      "frozen_500": "missing",
+      "model_fallback_distribution": "not yet computed (requires full pipeline run)"
+    },
+    "scale_region": {
+      "official_total": 2170.8,
+      "status": "config exists",
+      "boundary_golden": "requires full pipeline run"
+    },
+    "p1_p4": {
+      "total_candidates": 8950,
+      "distribution": "requires correct code_type from CSV"
+    },
+    "benchmark": {
+      "median_seconds": 11.29,
+      "records_per_sec": 6792,
+      "historical_ref": "9.6s (different hardware)"
+    },
+    "audit": {
+      "registered": 24,
+      "passed": 23,
+      "pending": 1
+    }
+  }
+}

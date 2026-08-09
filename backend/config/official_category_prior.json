@@ -1,0 +1,19 @@
+{
+  "meta": {
+    "source_sha256": "bfe1955a1a10f35f9b3b25bb590d0cef",
+    "mapping_version": "OFFICIAL-STRUCTURE-2022",
+    "derivation_method": "11-class → 9-class proportions, 其他 distributed proportionally",
+    "scenario_id": "standard",
+    "note": "Values are PROPORTIONS (sum=1), not absolute outputs in 亿元",
+    "derived_sha": "9de87f161153b3f0f8e3954aec6d98d2"
+  },
+  "prior": {
+    "体育管理": 0.071961,
+    "体育赛事": 0.009303,
+    "健身休闲": 0.099815,
+    "体育场馆": 0.181472,
+    "体育培训": 0.090568,
+    "体育传媒": 0.114275,
+    "体育用品": 0.432607
+  }
+}

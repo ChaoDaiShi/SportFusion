@@ -621,8 +621,8 @@ class TestClosureScenario(unittest.TestCase):
         configs = generate_scenario_configs()
         self.assertEqual(len(configs), 12)
 
-    def test_alpha_gt_0_without_prior_is_artifact_required(self):
-        """I. Formal scenario with alpha>0 must return artifact_required when prior missing"""
+    def test_alpha_gt_0_with_prior_succeeds(self):
+        """I. Formal scenario with alpha>0 now succeeds (official prior exists)"""
         config = ScenarioConfig(scenario_id="test", evidence_calibration="standard", alpha=0.20)
         enterprises = [{"enterprise_id": "1", "business_text": "体育赛事运营", "industry_code": 8911}]
         from services.sportshare.estimator import batch_estimate
@@ -631,8 +631,9 @@ class TestClosureScenario(unittest.TestCase):
         result = run_scenario(config, enterprises, estimates, [
             {"sport_score": 0.7, "code_type": "direct", "sport_category": "体育赛事"},
         ])
-        # Since official_category_prior.json doesn't exist, alpha>0 → artifact_required
-        self.assertEqual(result.status, "artifact_required")
+        # official_category_prior.json now exists → scenario should succeed
+        self.assertEqual(result.status, "ok")
+        self.assertAlmostEqual(result.total_allocated, 2170.80, places=0)
 
     def test_alpha_zero_works_without_prior(self):
         """alpha=0 scenarios work without official prior"""

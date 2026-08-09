@@ -1,0 +1,27 @@
+{
+  "meta": {
+    "source": "data\\SportFusion_人机协同仲裁参考标签集(1).csv",
+    "sha256": "4528854839626987fe1ca35a6ea27815d3c03ba75532fe7ac69c20ebe26a3e55",
+    "rows": 300,
+    "gold_yes": 190,
+    "gold_no": 95,
+    "gold_insufficient": 15,
+    "binary_clear": 285
+  },
+  "binary": {
+    "TP": 189,
+    "TN": 83,
+    "FP": 12,
+    "FN": 1,
+    "accuracy": 0.9543859649,
+    "precision": 0.9402985075,
+    "recall": 0.9947368421,
+    "f1": 0.9667519182
+  },
+  "category": {
+    "clear": 184,
+    "unknown": 6,
+    "correct": 171,
+    "accuracy": 0.9293478261
+  }
+}
