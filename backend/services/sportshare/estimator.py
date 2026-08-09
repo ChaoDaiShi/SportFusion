@@ -97,6 +97,7 @@ def estimate_sport_share(
     model_artifact: SportShareModelArtifact | None = None,
     residual_q90: float | None = None,
     manual_share_override: float | None = None,
+    data_mode: str = "test",
 ) -> SportShareEstimate:
     """
     统一 SportShare 估计 — 所有路径的单一入口。
@@ -153,33 +154,37 @@ def estimate_sport_share(
         return estimate
 
     # ---- Model path ----
-    if model_artifact is not None and _is_model_eligible(text, code, recognition_result):
-        estimate.is_model_eligible = True
-        try:
-            fv = build_sportshare_features(
-                business_text=text,
-                industry_code=code,
-            )
-            feat_array = sportshare_features_to_array(fv)
-            pred = predict_single(model_artifact, feat_array)
-            estimate.model_share = round(pred, 4)
-            estimate.share_source = "model"
-            estimate.model_version = model_artifact.model_version
-            estimate.residual_q90 = residual_q90
-
-            if residual_q90 is not None:
-                lower, upper = build_prediction_interval(pred, residual_q90)
-                estimate.lower_bound = lower
-                estimate.upper_bound = upper
-            else:
-                estimate.lower_bound = max(0.0, pred - 0.05)
-                estimate.upper_bound = min(1.0, pred + 0.05)
-
-            estimate.effective_share = estimate.model_share
-            estimate.metadata["model_version"] = model_artifact.model_version
-            return estimate
-        except Exception:  # noqa: BLE001, S110 — model fallback is intentional
-            pass  # Fall through to fallback on model failure
+    if model_artifact is not None:
+        if _is_model_eligible(text, code, recognition_result):
+            estimate.is_model_eligible = True
+            try:
+                fv = build_sportshare_features(business_text=text, industry_code=code)
+                feat_array = sportshare_features_to_array(fv)
+                pred = predict_single(model_artifact, feat_array)
+                estimate.model_share = round(pred, 4)
+                estimate.share_source = "model"
+                estimate.model_version = model_artifact.model_version
+                estimate.residual_q90 = residual_q90
+                if residual_q90 is not None:
+                    lower, upper = build_prediction_interval(pred, residual_q90)
+                    estimate.lower_bound = lower
+                    estimate.upper_bound = upper
+                else:
+                    estimate.lower_bound = max(0.0, pred - 0.05)
+                    estimate.upper_bound = min(1.0, pred + 0.05)
+                estimate.effective_share = estimate.model_share
+                estimate.metadata["model_version"] = model_artifact.model_version
+                return estimate
+            except Exception:  # noqa: BLE001, S110
+                pass  # Model inference failed → fall through to fallback
+        # Model exists but enterprise not eligible → individual fallback
+        pass
+    elif data_mode == "formal":
+        # Formal mode: missing model artifact → artifact_required, NOT batch fallback
+        estimate.share_source = "artifact_required"
+        estimate.effective_share = 0.0
+        estimate.metadata["error"] = "正式 SportShare model artifact 不存在 — 无法进行模型估计"
+        return estimate
 
     # ---- Fallback path ----
     from services.business_line_service import classify_business_line, parse_business_lines
