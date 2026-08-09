@@ -178,7 +178,6 @@ def estimate_sport_share(
             except Exception:  # noqa: BLE001, S110
                 pass  # Model inference failed → fall through to fallback
         # Model exists but enterprise not eligible → individual fallback
-        pass
     elif data_mode == "formal":
         # Formal mode: missing model artifact → artifact_required, NOT batch fallback
         estimate.share_source = "artifact_required"
