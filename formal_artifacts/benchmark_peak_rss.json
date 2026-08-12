@@ -1,0 +1,41 @@
+{
+  "benchmark_id": "phase5-recognition-peak-rss-v1",
+  "status": "measured",
+  "base_release_commit": "a1f9c23cc148ff33f2fbf3702ac0a23c89416415",
+  "instrumentation_commit": "85630ee0a667f947b54d6589f50ddde74eb847af",
+  "github_actions_run_id": 31611147946,
+  "dataset": "submission/处理后数据/enterprise_dataset_20260629_160902.csv",
+  "rows": 76687,
+  "method": {
+    "warmup": "3 x first 100 records",
+    "measured_repeats": 5,
+    "process_isolation": "fresh child process per measured repeat",
+    "memory_metric": "Linux resource.getrusage(RUSAGE_SELF).ru_maxrss",
+    "memory_scope": "full process RSS including loaded input and recognition execution"
+  },
+  "environment": {
+    "os": "Ubuntu 24.04.4 LTS",
+    "arch": "x86_64",
+    "python": "3.11.15",
+    "cpu": "AMD EPYC 7763 64-Core Processor",
+    "logical_cpus": 4,
+    "memory_total_mib": 15989.69921875
+  },
+  "samples": [
+    {"elapsed_seconds": 11.821735585000006, "records_per_second": 6486.949352623333, "peak_rss_mib": 116.1796875},
+    {"elapsed_seconds": 11.762636614999998, "records_per_second": 6519.541707358951, "peak_rss_mib": 112.8046875},
+    {"elapsed_seconds": 11.721621893999995, "records_per_second": 6542.354009836656, "peak_rss_mib": 112.75},
+    {"elapsed_seconds": 11.71893351, "records_per_second": 6543.854859707281, "peak_rss_mib": 112.5625},
+    {"elapsed_seconds": 11.63911718300001, "records_per_second": 6588.729952131451, "peak_rss_mib": 112.50390625}
+  ],
+  "summary": {
+    "median_elapsed_seconds": 11.721621893999995,
+    "min_elapsed_seconds": 11.63911718300001,
+    "max_elapsed_seconds": 11.821735585000006,
+    "median_records_per_second": 6542.354009836656,
+    "median_ms_per_record": 0.15285018183003632,
+    "median_peak_rss_mib": 112.75,
+    "max_peak_rss_mib": 116.1796875
+  },
+  "note": "This artifact records the GitHub Actions measurement. It is a performance/resource benchmark of the Phase-5 recognition function; locked formal candidate counts remain governed by the formal Golden artifacts."
+}
