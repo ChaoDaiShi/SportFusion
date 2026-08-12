@@ -17,12 +17,11 @@ class TestGoldenScale(unittest.TestCase):
     @pytest.mark.formal_artifact
     def test_category_output_conservation(self):
         """If formal scale artifact exists: Σcategory ≈ 2170.80."""
-        import json
         paths = list(Path(".").glob("**/sport_ratio_results*.csv"))
         if not paths:
             self.skipTest("Formal scale artifact missing")
         # Conservation check: run scale pipeline against formal data
-        pass  # Requires full formal pipeline
+        # Requires full formal pipeline
 
     @pytest.mark.formal_artifact
     def test_boundary_output_exists(self):
@@ -52,7 +51,6 @@ class TestGoldenRegion(unittest.TestCase):
         if not paths:
             self.skipTest("Formal region data missing")
         # Golden region assertion from formal data
-        pass
 
 
 if __name__ == "__main__":

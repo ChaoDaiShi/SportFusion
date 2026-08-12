@@ -482,7 +482,8 @@ class TestClosureIndirectLeakage(unittest.TestCase):
 
     def test_feature_array_excludes_sport_score(self):
         """Feature array length = 11 (no sport_score)"""
-        from ml.sportshare.features import FEATURE_NAMES as FNS, build_sportshare_features, sportshare_features_to_array
+        from ml.sportshare.features import FEATURE_NAMES as FNS
+        from ml.sportshare.features import build_sportshare_features, sportshare_features_to_array
         fv = build_sportshare_features("体育赛事运营，运动器材销售", 8911)
         arr = sportshare_features_to_array(fv)
         self.assertEqual(len(arr), len(FNS))

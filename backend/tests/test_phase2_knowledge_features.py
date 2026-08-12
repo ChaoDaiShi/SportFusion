@@ -112,7 +112,7 @@ class TestKnowledgeFiles(unittest.TestCase):
 
     def test_all_categories_belong_to_taxonomy(self):
         terms = get_enabled_terms()
-        categories = set(t["category"] for t in terms)
+        categories = {t["category"] for t in terms}
         for cat in categories:
             self.assertIn(cat, CANONICAL_CATEGORY_NAMES,
                           f"Category '{cat}' not in taxonomy")

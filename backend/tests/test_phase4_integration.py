@@ -104,7 +104,7 @@ class TestPhase4IntegrationWorkflow(unittest.TestCase):
 
     def test_full_pipeline_workflow(self):
         """A. Full integration: create→recognition→share→scale→review→finalize→directory"""
-        batch_id, tasks, enterprises, recs, shares = self._run_full_pipeline(self.store)
+        batch_id, tasks, _enterprises, _recs, _shares = self._run_full_pipeline(self.store)
 
         # E1 has sport → should be P3 or P2
         self.assertIn(tasks[0].priority, ["P2", "P3"])
@@ -155,7 +155,7 @@ class TestPhase4IntegrationWorkflow(unittest.TestCase):
 
     def test_restart_persistence(self):
         """B. Restart persistence: results survive store re-instantiation."""
-        batch_id, tasks, enterprises, recs, shares = self._run_full_pipeline(self.store)
+        batch_id, _tasks, _enterprises, _recs, _shares = self._run_full_pipeline(self.store)
 
         # Simulate service restart — create new store pointing to same dir
         new_store = BatchStore(storage_dir=self.tmpdir.name)
@@ -179,7 +179,7 @@ class TestPhase4IntegrationWorkflow(unittest.TestCase):
 
     def test_formal_batch_with_missing_share_model(self):
         """C. Formal batch without model artifact → fallback (not demo)"""
-        batch = self.store.create_batch(data_mode=DataMode.FORMAL.value, total_rows=1)
+        self.store.create_batch(data_mode=DataMode.FORMAL.value, total_rows=1)
         ent = {"enterprise_id": "F1", "business_text": "体育赛事运营", "industry_code": 8911}
         rec = recognize_sport_business("体育赛事运营", 8911)
         est = estimate_sport_share(enterprise=ent, recognition_result=rec, model_artifact=None)
@@ -190,7 +190,7 @@ class TestPhase4IntegrationWorkflow(unittest.TestCase):
 
     def test_directory_excludes_non_finalized(self):
         """D. Directory must exclude pending/disputed enterprises."""
-        batch_id, tasks, enterprises, recs, shares = self._run_full_pipeline(self.store)
+        batch_id, _tasks, _enterprises, _recs, _shares = self._run_full_pipeline(self.store)
         dir_svc = DirectoryService(store=self.store)
 
         # Before review completion, directory should be empty

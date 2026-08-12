@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pytest
 from alembic.config import Config
+from alembic.script import ScriptDirectory
 from sqlalchemy import create_engine, inspect, text
 
 from alembic import command
@@ -21,12 +22,16 @@ if MAIN_WORKSPACE_RUNTIME_DB is not None:
     RUNTIME_DATABASES.append(MAIN_WORKSPACE_RUNTIME_DB)
 
 EXPECTED_TABLES = {
+    "audit_log",
     "arbitration_records",
+    "benchmark_runs",
     "batches",
     "data_sources",
+    "directory_entries",
     "enterprise_businesses",
     "enterprise_scales",
     "enterprises",
+    "macro_calibrations",
     "measurements",
     "model_metrics",
     "operation_logs",
@@ -34,7 +39,12 @@ EXPECTED_TABLES = {
     "regional_scale_results",
     "review_records",
     "review_tasks",
+    "review_tasks_v2",
+    "scenario_runs",
     "sport_share_results",
+    "sportshare_model_artifacts",
+    "sportshare_predictions",
+    "validation_runs",
 }
 
 
@@ -166,4 +176,4 @@ def test_seeded_current_schema_can_be_stamped_without_changing_business_rows(tmp
             ).scalar_one()
     finally:
         stamped_engine.dispose()
-    assert revision == "1d865fc0001"
+    assert revision == ScriptDirectory.from_config(config).get_current_head()

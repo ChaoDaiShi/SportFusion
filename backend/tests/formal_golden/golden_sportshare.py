@@ -33,7 +33,7 @@ class TestGoldenSportShareMetrics(unittest.TestCase):
             self.skipTest("Formal sport_ratio_results missing")
         # Source distribution check uses the formal batch output
         # Actual Golden values come from running the full pipeline
-        pass  # Formal pipeline Golden assertion
+        # Formal pipeline Golden assertion
 
 
 class TestGoldenSportShareFeatures(unittest.TestCase):

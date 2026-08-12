@@ -289,3 +289,8 @@ class OperationLog(Base):
     detail = Column(Text, comment="操作详情(JSON)")
     ip_address = Column(String(50), comment="IP地址")
     created_at = Column(DateTime, default=datetime.now)
+
+
+# Register the SQL-backed Phase 3/4 repository tables in Base.metadata after
+# the legacy ORM tables (especially ``batches``) have been declared.
+from . import persistence_tables as _persistence_tables  # noqa: E402,F401

@@ -48,7 +48,7 @@ class TestCanonicalRecognitionGolden(unittest.TestCase):
         if not path:
             self.skipTest("Sport ratio results missing")
         rows = _load_csv(path)
-        sport_col = [c for c in rows[0].keys() if "是否体育" in c][0]
+        sport_col = next(c for c in rows[0] if "是否体育" in c)
         sf = sum(1 for r in rows if r.get(sport_col) in ("True","是","1","yes"))
         self.assertEqual(sf, 8950)
 
@@ -62,9 +62,9 @@ class TestCanonicalRecognitionGolden(unittest.TestCase):
         from utils.industry_code import is_direct_sport_code
         ds_rows = _load_csv(ds_path)
         sr_rows = _load_csv(sr_path)
-        cc_col = [c for c in ds_rows[0].keys() if "信用" in c and "行业" not in c][0]
-        sport_col = [c for c in sr_rows[0].keys() if "是否体育" in c][0]
-        sr_cc = list(sr_rows[0].keys())[0]
+        cc_col = next(c for c in ds_rows[0] if "信用" in c and "行业" not in c)
+        sport_col = next(c for c in sr_rows[0] if "是否体育" in c)
+        sr_cc = next(iter(sr_rows[0]))
         trad_ids = {r[cc_col] for r in ds_rows if is_direct_sport_code(normalize_industry_code(r.get("行业代码",""))) and r.get(cc_col)}
         sf_ids = {r[sr_cc] for r in sr_rows if r.get(sport_col) in ("True","是","1","yes") and r.get(sr_cc)}
         inter = trad_ids & sf_ids
@@ -82,8 +82,8 @@ class TestCanonicalRecognitionGolden(unittest.TestCase):
         if not path:
             self.skipTest("Sport ratio results missing")
         rows = _load_csv(path)
-        cross_col = [c for c in rows[0].keys() if "跨界" in c and "类型" in c][0]
-        sport_col = [c for c in rows[0].keys() if "是否体育" in c][0]
+        cross_col = next(c for c in rows[0] if "跨界" in c and "类型" in c)
+        sport_col = next(c for c in rows[0] if "是否体育" in c)
         cross = sum(1 for r in rows if r.get(sport_col) in ("True","是","1","yes") and r.get(cross_col,"").strip())
         self.assertEqual(cross, 977)
 

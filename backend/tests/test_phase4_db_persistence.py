@@ -8,12 +8,10 @@ Covers: recognition, share, scale, scenario, validation, review, directory.
 import unittest
 
 from repositories.recognition_repo import (
-    DBRecognitionRepository,
     FileRecognitionRepository,
     MemoryRecognitionRepository,
 )
 from repositories.sportshare_repo import (
-    DBSportShareRepository,
     FileSportShareRepository,
     MemorySportShareRepository,
 )
@@ -90,9 +88,9 @@ class TestFormalArtifactSemantics(unittest.TestCase):
 
     def test_formal_valid_model_enterprise_ineligible_fallback(self):
         """Formal with valid model but enterprise ineligible → fallback (correct)"""
-        from ml.sportshare.model import SportShareModelArtifact, create_model, train_model
         import numpy as np
         from ml.sportshare.features import FEATURE_NAMES
+        from ml.sportshare.model import SportShareModelArtifact, train_model
 
         # Train minimal model
         X = np.random.rand(20, len(FEATURE_NAMES))
@@ -135,8 +133,8 @@ class TestFullRestartPersistence(unittest.TestCase):
         self.tmpdir.cleanup()
 
     def test_full_restart_all_results_survive(self):
-        from services.sport_recognition import recognize_sport_business
         from services.review_workflow_service import create_review_tasks
+        from services.sport_recognition import recognize_sport_business
 
         store1 = BatchStore(storage_dir=self.tmpdir.name)
         batch = store1.create_batch(data_mode=DataMode.TEST.value, total_rows=3, operator="restart-test")
@@ -220,6 +218,7 @@ class TestFullRestartPersistence(unittest.TestCase):
 
         # Directory
         from services.directory_service import DirectoryService
+
         # Submit reviews to confirm some
         from services.review_workflow_service import submit_review
         t1 = tasks[0]
@@ -237,8 +236,9 @@ class TestScaleScenarioValidationRepos(unittest.TestCase):
     """Scale/Scenario/Validation repo roundtrip (DB not tested — requires in-memory SQLite)."""
 
     def test_scale_file_roundtrip(self):
-        from repositories.scale_repo import FileScaleRepository
         import tempfile
+
+        from repositories.scale_repo import FileScaleRepository
         with tempfile.TemporaryDirectory() as d:
             repo = FileScaleRepository(base_dir=d)
             results = [{"type": "category", "total_allocated": 2170.80, "outputs": {"体育赛事": 1085.40, "健身休闲": 1085.40}}]
@@ -257,8 +257,9 @@ class TestScaleScenarioValidationRepos(unittest.TestCase):
         self.assertEqual(loaded[0]["total_allocated"], 2170.80)
 
     def test_scenario_file_roundtrip(self):
-        from repositories.scale_repo import FileScenarioRepository
         import tempfile
+
+        from repositories.scale_repo import FileScenarioRepository
         with tempfile.TemporaryDirectory() as d:
             repo = FileScenarioRepository(base_dir=d)
             results = [{"scenario_id": "standard_alpha_20", "total_allocated": 2170.80, "status": "ok"}]
@@ -276,8 +277,9 @@ class TestScaleScenarioValidationRepos(unittest.TestCase):
         self.assertEqual(len(loaded), 1)
 
     def test_validation_file_roundtrip(self):
-        from repositories.scale_repo import FileValidationRepository
         import tempfile
+
+        from repositories.scale_repo import FileValidationRepository
         with tempfile.TemporaryDirectory() as d:
             repo = FileValidationRepository(base_dir=d)
             results = [{"type": "audit", "passed": 23, "total": 24}]
