@@ -82,6 +82,77 @@ def determine_priority(rec: dict[str, Any]) -> tuple[str, list[str], list[str]]:
     return ("P4", ["default"], ["未触发明确规则"])
 
 
+def generate_review_tasks(
+    batch_id: str,
+    recognition_results: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """API-compatible wrapper: generate review tasks and return as dicts."""
+    tasks = create_review_tasks(recognition_results, None, str(batch_id))
+    return [_task_to_dict(t) for t in tasks]
+
+
+def _task_to_dict(task: ReviewTask) -> dict[str, Any]:
+    return {
+        "id": task.task_id,
+        "task_id": task.task_id,
+        "batch_id": task.batch_id,
+        "enterprise_id": task.enterprise_id,
+        "credit_code": task.credit_code,
+        "enterprise_name": task.enterprise_name,
+        "priority": task.priority,
+        "status": task.status,
+        "sport_score": task.sport_score,
+        "sport_category": task.sport_category,
+        "code_type": task.code_type,
+        "evidence_relation": task.evidence_relation,
+        "confidence": task.confidence,
+        "effective_share": task.effective_share,
+        "share_source": task.share_source,
+        "assigned_to_a": task.reviewer_a,
+        "assigned_to_b": task.reviewer_b,
+        "final_sport_attribute": task.final_sport_attribute,
+        "final_sport_category": task.final_sport_category,
+        "final_share": task.final_share,
+        "trigger_rules": task.trigger_rules,
+        "risk_reasons": task.risk_reasons,
+        "evidence_summary": task.evidence_summary,
+        "created_at": task.created_at,
+        "updated_at": task.updated_at,
+    }
+
+
+def assign_reviewers(task: dict[str, Any], reviewer_a: str, reviewer_b: str) -> dict[str, Any]:
+    """Assign dual reviewers to a task dict."""
+    task["assigned_to_a"] = reviewer_a
+    task["assigned_to_b"] = reviewer_b
+    task["status"] = "assigned"
+    task["status_label"] = "已分配"
+    return task
+
+
+def check_consensus(record_a: dict[str, Any], record_b: dict[str, Any]) -> dict[str, Any]:
+    """Check whether two review records reach consensus."""
+    if not record_a or not record_b:
+        return {"is_consensus": False, "detail": "双方尚未全部提交复核意见"}
+    attr_match = record_a.get("sport_attribute") == record_b.get("sport_attribute")
+    cat_match = record_a.get("sport_category") == record_b.get("sport_category")
+    share_a = record_a.get("sport_share")
+    share_b = record_b.get("sport_share")
+    share_match = (share_a == share_b) if (share_a is not None and share_b is not None) else True
+    return {
+        "is_consensus": attr_match,
+        "detail": (
+            "双方达成共识" if attr_match
+            else f"分歧: 审核员A={record_a.get('sport_attribute')}, 审核员B={record_b.get('sport_attribute')}"
+        ),
+        "agreements": {
+            "sport_attribute": attr_match,
+            "sport_category": cat_match,
+            "sport_share": share_match,
+        },
+    }
+
+
 def create_review_tasks(
     recognition_results: list[dict[str, Any]],
     sportshare_estimates: list[Any] | None = None,

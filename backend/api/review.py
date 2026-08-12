@@ -9,6 +9,37 @@ from services.review_workflow_service import (
     submit_review, check_consensus, arbitrate, get_review_stats,
 )
 
+# Note: submit_review and arbitrate in the service operate on ReviewTask objects.
+# The API stores tasks as dicts; we convert on the fly where needed.
+from services.review_workflow_service import ReviewTask as _ReviewTask
+
+
+def _dict_to_task(t: dict) -> _ReviewTask:
+    """Convert a stored task dict back to a ReviewTask for service calls."""
+    return _ReviewTask(
+        task_id=t.get("task_id", t.get("id", "")),
+        batch_id=str(t.get("batch_id", "")),
+        enterprise_id=str(t.get("enterprise_id", "")),
+        credit_code=t.get("credit_code", ""),
+        enterprise_name=t.get("enterprise_name", ""),
+        priority=t.get("priority", ""),
+        status=t.get("status", "pending"),
+        sport_score=t.get("sport_score", 0.0),
+        sport_category=t.get("sport_category", ""),
+        code_type=t.get("code_type", ""),
+        evidence_relation=t.get("evidence_relation", ""),
+        confidence=t.get("confidence", 0.0),
+        effective_share=t.get("effective_share", 0.0),
+        share_source=t.get("share_source", ""),
+        reviewer_a=t.get("assigned_to_a", ""),
+        reviewer_b=t.get("assigned_to_b", ""),
+        trigger_rules=t.get("trigger_rules", []),
+        risk_reasons=t.get("risk_reasons", []),
+        evidence_summary=t.get("evidence_summary", ""),
+        created_at=t.get("created_at", ""),
+        updated_at=t.get("updated_at", ""),
+    )
+
 router = APIRouter()
 
 # 内存存储（后续可迁移到数据库）
@@ -123,15 +154,25 @@ async def submit_record(req: ReviewRecordSubmitRequest):
     if not task:
         return {"code": 404, "message": "任务不存在", "data": None}
 
-    record = submit_review(
-        task=task,
-        reviewer_name=req.reviewer_name,
+    review_task = _dict_to_task(task)
+    review_task = submit_review(
+        task=review_task,
         reviewer_role=req.reviewer_role,
         sport_attribute=req.sport_attribute,
-        sport_category_override=req.sport_category_override,
-        sport_share_override=req.sport_share_override,
+        sport_category=req.sport_category_override or "",
+        sport_share=req.sport_share_override,
         reason=req.reason,
     )
+    # Convert result back to dict for storage
+    record = {
+        "reviewer_name": req.reviewer_name,
+        "reviewer_role": req.reviewer_role,
+        "sport_attribute": req.sport_attribute,
+        "sport_category": req.sport_category_override,
+        "sport_share": req.sport_share_override,
+        "reason": req.reason,
+        "submitted_at": review_task.updated_at,
+    }
 
     # 存储记录
     if req.review_task_id not in _review_records:
@@ -185,16 +226,23 @@ async def do_arbitrate(req: ArbitrationRequest):
     record_a = records.get("A", {})
     record_b = records.get("B", {})
 
-    arbitration_record = arbitrate(
-        task=task,
-        record_a=record_a,
-        record_b=record_b,
+    review_task = _dict_to_task(task)
+    review_task = arbitrate(
+        task=review_task,
         arbiter_name=req.arbiter_name,
-        final_sport_attribute=req.final_sport_attribute,
-        final_sport_category=req.final_sport_category,
-        final_sport_share=req.final_sport_share,
-        decision_reason=req.decision_reason,
+        final_attribute=req.final_sport_attribute,
+        final_category=req.final_sport_category or "",
+        final_share=req.final_sport_share,
+        reason=req.decision_reason,
     )
+    arbitration_record = {
+        "arbiter": req.arbiter_name,
+        "final_sport_attribute": req.final_sport_attribute,
+        "final_sport_category": req.final_sport_category,
+        "final_sport_share": req.final_sport_share,
+        "decision_reason": req.decision_reason,
+        "arbitrated_at": review_task.updated_at,
+    }
 
     _arbitration_records[req.review_task_id] = arbitration_record
     task["status"] = "locked"

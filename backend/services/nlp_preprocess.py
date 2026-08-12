@@ -1,8 +1,11 @@
 """NLP预处理服务 - 文本特征提取、体育业务分类、标签标注"""
 from typing import List, Dict, Any, Optional
 from utils.text_tokenizer import (
-    tokenize, extract_keywords, match_sport_keywords,
-    match_sport_by_category, has_sport_content, get_sport_categories,
+    tokenize, extract_keywords,
+)
+from services.business_line_service import (
+    match_sport_keywords, match_sport_by_category,
+    has_sport_content, get_sport_categories,
 )
 from utils.industry_code import classify_by_text_and_code, is_any_sport_code, get_sport_category, get_code_type
 
@@ -71,8 +74,7 @@ def preprocess_enterprise(
     # 从企业名称中提取体育特征
     name_sport_keywords = []
     if name:
-        from utils.text_tokenizer import match_sport_keywords as msk
-        name_sport_keywords = msk(name)
+        name_sport_keywords = match_sport_keywords(name)
 
     # 特征工程
     text_len = len(str(text)) if text else 0
